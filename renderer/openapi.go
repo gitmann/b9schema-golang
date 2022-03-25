@@ -76,7 +76,7 @@ func (r *OpenAPIRenderer) Pre(t *types.TypeElement) []string {
 			// Build an API path.
 			out := []string{`paths:`}
 
-			out = append(out, r.Prefix()+r.URLPath)
+			out = append(out, r.Prefix()+r.URLPath+":")
 
 			r.SetIndent(r.Indent() + 1)
 			out = append(out, r.Prefix()+`get:`)
