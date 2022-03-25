@@ -8,6 +8,9 @@ import (
 	"strings"
 )
 
+// Default location for schema references without leading or training "/".
+var SCHEMA_PATH = "components/schemas"
+
 // OpenAPIRenderer provides a simple string renderer.
 type OpenAPIRenderer struct {
 	// Path
@@ -101,12 +104,15 @@ func (r *OpenAPIRenderer) Pre(t *types.TypeElement) []string {
 			r.SetIndent(r.Indent() + 1)
 			return out
 		} else if t.Name == "TypeRefs" {
-			// Store TypeRefs under the "components/schemas" key.
-			r.SetIndent(r.Indent() + 1)
-			return []string{
-				`components:`,
-				`  schemas:`,
+			// Store TypeRefs under the SCHEMA_PATH key.
+			tokens := strings.Split(SCHEMA_PATH, "/")
+
+			out := []string{}
+			for _, t := range tokens {
+				out = append(out, r.Prefix()+t+":")
+				r.SetIndent(r.Indent() + 1)
 			}
+			return out
 		}
 	}
 
@@ -120,7 +126,7 @@ func (r *OpenAPIRenderer) Pre(t *types.TypeElement) []string {
 	}
 
 	if jsonType.TypeRef != "" {
-		outLines = append(outLines, fmt.Sprintf(`%s$ref: '#/definitions/%s'`, r.Prefix(), jsonType.TypeRef))
+		outLines = append(outLines, fmt.Sprintf(`%s$ref: '#/%s/%s'`, r.Prefix(), SCHEMA_PATH, jsonType.TypeRef))
 	} else {
 		switch t.Type {
 		case generictype.Struct.String():
