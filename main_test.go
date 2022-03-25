@@ -1,9 +1,10 @@
-package renderer
+package main
 
 import (
 	"encoding/json"
 	"fmt"
 	"github.com/gitmann/b9schema-golang/reflector"
+	"github.com/gitmann/b9schema-golang/renderer"
 	"reflect"
 	"strings"
 	"testing"
@@ -1732,10 +1733,10 @@ func runTests(t *testing.T, testCases []TestCase) {
 		// }
 
 		for i := 0; i < 2; i++ {
-			opt := NewOptions()
+			opt := renderer.NewOptions()
 			opt.DeReference = i == 1
 
-			r := NewSimpleRenderer(opt)
+			r := renderer.NewSimpleRenderer(opt)
 			gotStrings, _ := r.ProcessResult(gotResult)
 
 			var wantStrings []string
@@ -1751,10 +1752,10 @@ func runTests(t *testing.T, testCases []TestCase) {
 
 		// Test json dialect.
 		if len(test.jsonStrings) > 0 {
-			opt := NewOptions()
+			opt := renderer.NewOptions()
 			opt.DeReference = false
 
-			r := NewJSONRenderer(opt)
+			r := renderer.NewJSONRenderer(opt)
 			gotStrings, _ := r.ProcessResult(gotResult)
 			wantStrings := test.jsonStrings
 
@@ -1764,11 +1765,11 @@ func runTests(t *testing.T, testCases []TestCase) {
 
 		// Test OpenAPI schema.
 		if len(test.openapiStrings) > 0 {
-			opt := NewOptions()
+			opt := renderer.NewOptions()
 			opt.DeReference = false
 			opt.Indent = 0
 
-			r := NewOpenAPIRenderer("/test/path", opt)
+			r := renderer.NewOpenAPIRenderer("/test/path", opt)
 			gotStrings, _ := r.ProcessResult(gotResult)
 			wantStrings := test.openapiStrings
 
