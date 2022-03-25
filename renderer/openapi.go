@@ -73,12 +73,11 @@ func (r *OpenAPIRenderer) Pre(t *types.TypeElement) []string {
 
 	// Special handling for root elements.
 	if t.Type == generictype.Root.String() {
-		r.SetIndent(r.Indent() + 1)
-
 		if t.Name == "Root" {
 			// Build an API path.
-			out := []string{`paths:`}
+			out := []string{r.Prefix() + `paths:`}
 
+			r.SetIndent(r.Indent() + 1)
 			out = append(out, r.Prefix()+r.URLPath+":")
 
 			r.SetIndent(r.Indent() + 1)
