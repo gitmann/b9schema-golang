@@ -5,6 +5,14 @@ type Options struct {
 	// - If TyepRefs have a cyclical relationship, the last TypeRef is kept as a TypeRef.
 	DeReference bool
 
+	// Dialects uses dialect resolution to override defaults.
+	// - May be overridden or ignored by renderers.
+	Dialects []string
+
+	// IncludeNative includes details on native types if set.
+	// - May be overridden or ignored by renderers.
+	IncludeNative bool
+
 	// Prefix is a string used as a prefix for indented lines.
 	Prefix string
 
@@ -13,6 +21,8 @@ type Options struct {
 }
 
 func NewOptions() *Options {
-	opt := &Options{}
+	opt := &Options{
+		Dialects: []string{},
+	}
 	return opt
 }

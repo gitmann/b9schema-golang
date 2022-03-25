@@ -2,6 +2,7 @@ package renderer
 
 import (
 	"github.com/gitmann/b9schema-golang/common/types"
+	"github.com/gitmann/b9schema-golang/common/util"
 )
 
 // RenderStrings builds a string representation of a type result using the given pre, path, and post functions.
@@ -43,7 +44,7 @@ func RenderType(t *types.TypeElement, r Renderer) []string {
 	out := []string{}
 
 	// Process element with preFunc.
-	out = appendStrings(out, r.Pre(t))
+	out = util.AppendStrings(out, r.Pre(t))
 
 	// Process children.
 	if !r.DeReference() && t.TypeRef != "" {
@@ -59,7 +60,7 @@ func RenderType(t *types.TypeElement, r Renderer) []string {
 		for _, childName := range typeRefKeys {
 			// Reset indent before each child.
 			r.SetIndent(childIndent)
-			out = appendStrings(out, RenderType(typeRefMap[childName], r))
+			out = util.AppendStrings(out, RenderType(typeRefMap[childName], r))
 		}
 	}
 
@@ -67,20 +68,10 @@ func RenderType(t *types.TypeElement, r Renderer) []string {
 	r.SetIndent(originalIndent)
 
 	// Process element with postFunc.
-	out = appendStrings(out, r.Post(t))
+	out = util.AppendStrings(out, r.Post(t))
 
 	// Restore original indent.
 	r.SetIndent(originalIndent)
 
-	return out
-}
-
-// appendStrings adds non-empty strings from in to out and returns a new slice.
-func appendStrings(out []string, in []string) []string {
-	for _, s := range in {
-		if s != "" {
-			out = append(out, s)
-		}
-	}
 	return out
 }

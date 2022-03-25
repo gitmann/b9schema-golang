@@ -1,4 +1,4 @@
-package renderer
+package json
 
 import (
 	"fmt"
@@ -6,25 +6,26 @@ import (
 	"github.com/gitmann/b9schema-golang/common/enum/threeflag"
 	"github.com/gitmann/b9schema-golang/common/enum/typecategory"
 	"github.com/gitmann/b9schema-golang/common/types"
+	"github.com/gitmann/b9schema-golang/renderer"
 	"strings"
 )
 
 // JSONRenderer provides a simple string renderer.
 type JSONRenderer struct {
-	opt *Options
+	opt *renderer.Options
 }
 
-func NewJSONRenderer(opt *Options) *JSONRenderer {
+func NewJSONRenderer(opt *renderer.Options) *JSONRenderer {
 	if opt == nil {
-		opt = NewOptions()
+		opt = renderer.NewOptions()
 	}
 
 	return &JSONRenderer{opt: opt}
 }
 
-func (r *JSONRenderer) ProcessResult(result *types.Schema) ([]string, error) {
+func (r *JSONRenderer) ProcessSchema(schema *types.Schema, settings ...string) ([]string, error) {
 	// Header
-	return RenderSchema(result, r), nil
+	return renderer.RenderSchema(schema, r), nil
 	// Footer
 }
 

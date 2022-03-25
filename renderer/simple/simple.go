@@ -1,29 +1,30 @@
-package renderer
+package simple
 
 import (
 	"fmt"
 	"github.com/gitmann/b9schema-golang/common/enum/generictype"
 	"github.com/gitmann/b9schema-golang/common/enum/typecategory"
 	"github.com/gitmann/b9schema-golang/common/types"
+	"github.com/gitmann/b9schema-golang/renderer"
 	"strings"
 )
 
 // SimpleRenderer provides a simple string renderer.
 type SimpleRenderer struct {
-	opt *Options
+	opt *renderer.Options
 }
 
-func NewSimpleRenderer(opt *Options) *SimpleRenderer {
+func NewSimpleRenderer(opt *renderer.Options) *SimpleRenderer {
 	if opt == nil {
-		opt = NewOptions()
+		opt = renderer.NewOptions()
 	}
 
 	return &SimpleRenderer{opt: opt}
 }
 
-func (r *SimpleRenderer) ProcessResult(result *types.Schema) ([]string, error) {
+func (r *SimpleRenderer) ProcessSchema(schema *types.Schema, settings ...string) ([]string, error) {
 	// Header
-	return RenderSchema(result, r), nil
+	return renderer.RenderSchema(schema, r), nil
 	// Footer
 }
 

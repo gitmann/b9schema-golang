@@ -6,7 +6,8 @@ import (
 
 type Renderer interface {
 	// ProcessResult starts the render process on a Schema and returns a slice of strings.
-	ProcessResult(result *types.Schema) ([]string, error)
+	// - settings is one or more strings with options for specific processors.
+	ProcessSchema(schema *types.Schema, settings ...string) ([]string, error)
 
 	// DeReference returns true if schema references should be replaced with inline types.
 	DeReference() bool

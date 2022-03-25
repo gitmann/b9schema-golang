@@ -98,3 +98,13 @@ func Capitalize(s string) string {
 	// Build a new string with 1st letter uppercase.
 	return strings.ToUpper(s[0:1]) + s[1:]
 }
+
+// AppendStrings adds non-empty strings from in to out and returns a new slice.
+func AppendStrings(out []string, in []string) []string {
+	for _, s := range in {
+		if s != "" {
+			out = append(out, s)
+		}
+	}
+	return out
+}

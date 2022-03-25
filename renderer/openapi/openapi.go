@@ -1,27 +1,29 @@
-package renderer
+package openapi
 
 import (
 	"fmt"
 	"github.com/gitmann/b9schema-golang/common/enum/generictype"
 	"github.com/gitmann/b9schema-golang/common/enum/threeflag"
 	"github.com/gitmann/b9schema-golang/common/types"
+	"github.com/gitmann/b9schema-golang/common/util"
+	"github.com/gitmann/b9schema-golang/renderer"
 	"strings"
 )
 
 // Default location for schema references without leading or training "/".
-var SCHEMA_PATH = "components/schemas"
+const SCHEMA_PATH = "components/schemas"
 
 // OpenAPIRenderer provides a simple string renderer.
 type OpenAPIRenderer struct {
 	// Path
 	URLPath string
 
-	opt *Options
+	opt *renderer.Options
 }
 
-func NewOpenAPIRenderer(urlPath string, opt *Options) *OpenAPIRenderer {
+func NewOpenAPIRenderer(urlPath string, opt *renderer.Options) *OpenAPIRenderer {
 	if opt == nil {
-		opt = NewOptions()
+		opt = renderer.NewOptions()
 	}
 
 	opt.Prefix = "  "
@@ -32,13 +34,13 @@ func NewOpenAPIRenderer(urlPath string, opt *Options) *OpenAPIRenderer {
 	}
 }
 
-func (r *OpenAPIRenderer) ProcessResult(result *types.Schema) ([]string, error) {
+func (r *OpenAPIRenderer) ProcessSchema(schema *types.Schema, settings ...string) ([]string, error) {
 	out := []string{}
 
 	// Header
 	out = append(out, `openapi: 3.0.0`)
 
-	out = appendStrings(out, RenderSchema(result, r))
+	out = util.AppendStrings(out, renderer.RenderSchema(schema, r))
 
 	// Footer
 

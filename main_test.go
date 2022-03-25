@@ -3,16 +3,21 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/ghodss/yaml"
+	"github.com/gitmann/b9schema-golang/common/util"
+	"github.com/gitmann/b9schema-golang/fixtures"
 	"github.com/gitmann/b9schema-golang/reflector"
 	"github.com/gitmann/b9schema-golang/renderer"
-	"reflect"
+	json2 "github.com/gitmann/b9schema-golang/renderer/json"
+	"github.com/gitmann/b9schema-golang/renderer/openapi"
+	"github.com/gitmann/b9schema-golang/renderer/simple"
 	"strings"
 	"testing"
 	"time"
 	"unsafe"
 )
 
-var allTests = [][]TestCase{
+var allTests = [][]fixtures.TestCase{
 	rootJSONTests,
 	rootGoTests,
 	typeTests,
@@ -26,222 +31,211 @@ var allTests = [][]TestCase{
 	// pointerTests,
 }
 
-type TestCase struct {
-	name  string
-	value interface{}
-
-	// Expected strings for reference and de-reference.
-	refStrings     []string
-	derefStrings   []string
-	jsonStrings    []string
-	openapiStrings []string
-}
-
 // *** All reflect types ***
 
 // rootTests validate that the top-level element is either a struct or Reference.
-var rootJSONTests = []TestCase{
+var rootJSONTests = []fixtures.TestCase{
 	{
-		name:         "json-null",
-		value:        fromJSON([]byte(`null`)),
-		refStrings:   []string{"Root.!invalid:nil! ERROR:kind not supported"},
-		derefStrings: []string{"Root.!invalid:nil! ERROR:kind not supported"},
+		Name:         "json-null",
+		Value:        fromJSON([]byte(`null`)),
+		RefStrings:   []string{"Root.!invalid:nil! ERROR:kind not supported"},
+		DerefStrings: []string{"Root.!invalid:nil! ERROR:kind not supported"},
 	},
 	{
-		name:         "json-string",
-		value:        fromJSON([]byte(`"Hello"`)),
-		refStrings:   []string{"Root.!string! ERROR:root type must be a struct"},
-		derefStrings: []string{"Root.!string! ERROR:root type must be a struct"},
+		Name:         "json-string",
+		Value:        fromJSON([]byte(`"Hello"`)),
+		RefStrings:   []string{"Root.!string! ERROR:root type must be a struct"},
+		DerefStrings: []string{"Root.!string! ERROR:root type must be a struct"},
 	},
 	{
-		name:         "json-int",
-		value:        fromJSON([]byte(`123`)),
-		refStrings:   []string{"Root.!float! ERROR:root type must be a struct"},
-		derefStrings: []string{"Root.!float! ERROR:root type must be a struct"},
+		Name:         "json-int",
+		Value:        fromJSON([]byte(`123`)),
+		RefStrings:   []string{"Root.!float! ERROR:root type must be a struct"},
+		DerefStrings: []string{"Root.!float! ERROR:root type must be a struct"},
 	},
 	{
-		name:         "json-float",
-		value:        fromJSON([]byte(`234.345`)),
-		refStrings:   []string{"Root.!float! ERROR:root type must be a struct"},
-		derefStrings: []string{"Root.!float! ERROR:root type must be a struct"},
+		Name:         "json-float",
+		Value:        fromJSON([]byte(`234.345`)),
+		RefStrings:   []string{"Root.!float! ERROR:root type must be a struct"},
+		DerefStrings: []string{"Root.!float! ERROR:root type must be a struct"},
 	},
 	{
-		name:         "json-bool",
-		value:        fromJSON([]byte(`true`)),
-		refStrings:   []string{"Root.!boolean! ERROR:root type must be a struct"},
-		derefStrings: []string{"Root.!boolean! ERROR:root type must be a struct"},
+		Name:         "json-bool",
+		Value:        fromJSON([]byte(`true`)),
+		RefStrings:   []string{"Root.!boolean! ERROR:root type must be a struct"},
+		DerefStrings: []string{"Root.!boolean! ERROR:root type must be a struct"},
 	},
 	{
-		name:         "json-list-empty",
-		value:        fromJSON([]byte(`[]`)),
-		refStrings:   []string{"Root.![]! ERROR:root type must be a struct"},
-		derefStrings: []string{"Root.![]! ERROR:root type must be a struct"},
+		Name:         "json-list-empty",
+		Value:        fromJSON([]byte(`[]`)),
+		RefStrings:   []string{"Root.![]! ERROR:root type must be a struct"},
+		DerefStrings: []string{"Root.![]! ERROR:root type must be a struct"},
 	},
 	{
-		name:         "json-list",
-		value:        fromJSON([]byte(`[1,2,3]`)),
-		refStrings:   []string{"Root.![]! ERROR:root type must be a struct"},
-		derefStrings: []string{"Root.![]! ERROR:root type must be a struct"},
+		Name:         "json-list",
+		Value:        fromJSON([]byte(`[1,2,3]`)),
+		RefStrings:   []string{"Root.![]! ERROR:root type must be a struct"},
+		DerefStrings: []string{"Root.![]! ERROR:root type must be a struct"},
 	},
 	{
-		name:         "json-object-empty",
-		value:        fromJSON([]byte(`{}`)),
-		refStrings:   []string{"Root.!{}! ERROR:empty map not supported"},
-		derefStrings: []string{"Root.!{}! ERROR:empty map not supported"},
+		Name:         "json-object-empty",
+		Value:        fromJSON([]byte(`{}`)),
+		RefStrings:   []string{"Root.!{}! ERROR:empty map not supported"},
+		DerefStrings: []string{"Root.!{}! ERROR:empty map not supported"},
 	},
 	{
-		name:  "json-object",
-		value: fromJSON([]byte(`{"key1":"Hello"}`)),
-		refStrings: []string{
+		Name:  "json-object",
+		Value: fromJSON([]byte(`{"key1":"Hello"}`)),
+		RefStrings: []string{
 			"Root.{}",
 			"Root.{}.Key1:string",
 		},
-		derefStrings: []string{
+		DerefStrings: []string{
 			"Root.{}",
 			"Root.{}.Key1:string",
 		},
 	},
 }
 
-var rootGoTests = []TestCase{
+var rootGoTests = []fixtures.TestCase{
 	{
-		name:         "golang-nil",
-		value:        nil,
-		refStrings:   []string{"Root.!invalid:nil! ERROR:kind not supported"},
-		derefStrings: []string{"Root.!invalid:nil! ERROR:kind not supported"},
+		Name:         "golang-nil",
+		Value:        nil,
+		RefStrings:   []string{"Root.!invalid:nil! ERROR:kind not supported"},
+		DerefStrings: []string{"Root.!invalid:nil! ERROR:kind not supported"},
 	},
 	{
-		name:         "golang-string",
-		value:        "Hello",
-		refStrings:   []string{"Root.!string! ERROR:root type must be a struct"},
-		derefStrings: []string{"Root.!string! ERROR:root type must be a struct"},
+		Name:         "golang-string",
+		Value:        "Hello",
+		RefStrings:   []string{"Root.!string! ERROR:root type must be a struct"},
+		DerefStrings: []string{"Root.!string! ERROR:root type must be a struct"},
 	},
 	{
-		name:         "golang-int",
-		value:        123,
-		refStrings:   []string{"Root.!integer! ERROR:root type must be a struct"},
-		derefStrings: []string{"Root.!integer! ERROR:root type must be a struct"},
+		Name:         "golang-int",
+		Value:        123,
+		RefStrings:   []string{"Root.!integer! ERROR:root type must be a struct"},
+		DerefStrings: []string{"Root.!integer! ERROR:root type must be a struct"},
 	},
 	{
-		name:         "golang-float",
-		value:        234.345,
-		refStrings:   []string{"Root.!float! ERROR:root type must be a struct"},
-		derefStrings: []string{"Root.!float! ERROR:root type must be a struct"},
+		Name:         "golang-float",
+		Value:        234.345,
+		RefStrings:   []string{"Root.!float! ERROR:root type must be a struct"},
+		DerefStrings: []string{"Root.!float! ERROR:root type must be a struct"},
 	},
 	{
-		name:         "golang-bool",
-		value:        true,
-		refStrings:   []string{"Root.!boolean! ERROR:root type must be a struct"},
-		derefStrings: []string{"Root.!boolean! ERROR:root type must be a struct"},
+		Name:         "golang-bool",
+		Value:        true,
+		RefStrings:   []string{"Root.!boolean! ERROR:root type must be a struct"},
+		DerefStrings: []string{"Root.!boolean! ERROR:root type must be a struct"},
 	},
 	{
-		name:         "golang-array-0",
-		value:        [0]string{},
-		refStrings:   []string{"Root.![]! ERROR:root type must be a struct"},
-		derefStrings: []string{"Root.![]! ERROR:root type must be a struct"},
+		Name:         "golang-array-0",
+		Value:        [0]string{},
+		RefStrings:   []string{"Root.![]! ERROR:root type must be a struct"},
+		DerefStrings: []string{"Root.![]! ERROR:root type must be a struct"},
 	},
 	{
-		name:         "golang-array-3",
-		value:        [3]string{},
-		refStrings:   []string{"Root.![]! ERROR:root type must be a struct"},
-		derefStrings: []string{"Root.![]! ERROR:root type must be a struct"},
+		Name:         "golang-array-3",
+		Value:        [3]string{},
+		RefStrings:   []string{"Root.![]! ERROR:root type must be a struct"},
+		DerefStrings: []string{"Root.![]! ERROR:root type must be a struct"},
 	},
 	{
-		name:         "golang-slice-nil",
-		value:        func() interface{} { var s []string; return s }(),
-		refStrings:   []string{"Root.![]! ERROR:root type must be a struct"},
-		derefStrings: []string{"Root.![]! ERROR:root type must be a struct"},
+		Name:         "golang-slice-nil",
+		Value:        func() interface{} { var s []string; return s }(),
+		RefStrings:   []string{"Root.![]! ERROR:root type must be a struct"},
+		DerefStrings: []string{"Root.![]! ERROR:root type must be a struct"},
 	},
 	{
-		name:         "golang-slice-0",
-		value:        []string{},
-		refStrings:   []string{"Root.![]! ERROR:root type must be a struct"},
-		derefStrings: []string{"Root.![]! ERROR:root type must be a struct"},
+		Name:         "golang-slice-0",
+		Value:        []string{},
+		RefStrings:   []string{"Root.![]! ERROR:root type must be a struct"},
+		DerefStrings: []string{"Root.![]! ERROR:root type must be a struct"},
 	},
 	{
-		name:         "golang-slice-3",
-		value:        make([]string, 3),
-		refStrings:   []string{"Root.![]! ERROR:root type must be a struct"},
-		derefStrings: []string{"Root.![]! ERROR:root type must be a struct"},
+		Name:         "golang-slice-3",
+		Value:        make([]string, 3),
+		RefStrings:   []string{"Root.![]! ERROR:root type must be a struct"},
+		DerefStrings: []string{"Root.![]! ERROR:root type must be a struct"},
 	},
 	{
-		name: "golang-struct-empty", value: func() interface{} { var s struct{}; return s }(),
-		refStrings:   []string{"Root.!{}! ERROR:empty struct not supported"},
-		derefStrings: []string{"Root.!{}! ERROR:empty struct not supported"},
+		Name: "golang-struct-empty", Value: func() interface{} { var s struct{}; return s }(),
+		RefStrings:   []string{"Root.!{}! ERROR:empty struct not supported"},
+		DerefStrings: []string{"Root.!{}! ERROR:empty struct not supported"},
 	},
 	{
-		name:  "golang-struct-noinit",
-		value: func() interface{} { var s StringStruct; return s }(),
-		refStrings: []string{
+		Name:  "golang-struct-noinit",
+		Value: func() interface{} { var s StringStruct; return s }(),
+		RefStrings: []string{
 			`TypeRefs.StringStruct:{}`,
 			`TypeRefs.StringStruct:{}.Value:string`,
 			`Root.{}:StringStruct`,
 		},
-		derefStrings: []string{
+		DerefStrings: []string{
 			`Root.{}`,
 			`Root.{}.Value:string`,
 		},
 	},
 	{
-		name:  "golang-struct-init",
-		value: StringStruct{},
-		refStrings: []string{
+		Name:  "golang-struct-init",
+		Value: StringStruct{},
+		RefStrings: []string{
 			`TypeRefs.StringStruct:{}`,
 			`TypeRefs.StringStruct:{}.Value:string`,
 			`Root.{}:StringStruct`,
 		},
-		derefStrings: []string{
+		DerefStrings: []string{
 			`Root.{}`,
 			`Root.{}.Value:string`,
 		},
 	},
 	{
-		name:  "golang-struct-private",
-		value: PrivateStruct{},
-		refStrings: []string{
+		Name:  "golang-struct-private",
+		Value: PrivateStruct{},
+		RefStrings: []string{
 			`TypeRefs.!PrivateStruct:{}! ERROR:struct has no exported fields`,
 			`Root.!{}:PrivateStruct! ERROR:struct has no exported fields`,
 		},
-		derefStrings: []string{
+		DerefStrings: []string{
 			`Root.!{}! ERROR:struct has no exported fields`,
 		},
 	},
 
 	{
-		name:  "golang-interface-struct-noinit",
-		value: func() interface{} { var s interface{} = StringStruct{}; return s }(),
-		refStrings: []string{
+		Name:  "golang-interface-struct-noinit",
+		Value: func() interface{} { var s interface{} = StringStruct{}; return s }(),
+		RefStrings: []string{
 			`TypeRefs.StringStruct:{}`,
 			`TypeRefs.StringStruct:{}.Value:string`,
 			`Root.{}:StringStruct`,
 		},
-		derefStrings: []string{
+		DerefStrings: []string{
 			`Root.{}`,
 			`Root.{}.Value:string`,
 		},
 	},
 	{
-		name:  "golang-pointer-struct-noinit",
-		value: func() interface{} { var s *StringStruct; return s }(),
-		refStrings: []string{
+		Name:  "golang-pointer-struct-noinit",
+		Value: func() interface{} { var s *StringStruct; return s }(),
+		RefStrings: []string{
 			`TypeRefs.StringStruct:{}`,
 			`TypeRefs.StringStruct:{}.Value:string`,
 			`Root.{}:StringStruct`,
 		},
-		derefStrings: []string{
+		DerefStrings: []string{
 			`Root.{}`,
 			`Root.{}.Value:string`,
 		},
 	},
 	{
-		name:  "golang-pointer-struct-init",
-		value: &StringStruct{},
-		refStrings: []string{
+		Name:  "golang-pointer-struct-init",
+		Value: &StringStruct{},
+		RefStrings: []string{
 			`TypeRefs.StringStruct:{}`,
 			`TypeRefs.StringStruct:{}.Value:string`,
 			`Root.{}:StringStruct`,
 		},
-		derefStrings: []string{
+		DerefStrings: []string{
 			`Root.{}`,
 			`Root.{}.Value:string`,
 		},
@@ -302,20 +296,20 @@ type SpecialTypes struct {
 	DateTime time.Time
 }
 
-var typeTests = []TestCase{
+var typeTests = []fixtures.TestCase{
 	{
-		name:  "boolean",
-		value: BoolTypes{},
-		refStrings: []string{
+		Name:  "boolean",
+		Value: BoolTypes{},
+		RefStrings: []string{
 			`TypeRefs.BoolTypes:{}`,
 			`TypeRefs.BoolTypes:{}.Bool:boolean`,
 			`Root.{}:BoolTypes`,
 		},
-		derefStrings: []string{
+		DerefStrings: []string{
 			`Root.{}`,
 			`Root.{}.Bool:boolean`,
 		},
-		openapiStrings: []string{
+		OpenAPIStrings: []string{
 			`openapi: 3.0.0`,
 			`components:`,
 			`  schemas:`,
@@ -338,9 +332,9 @@ var typeTests = []TestCase{
 		},
 	},
 	{
-		name:  "integer",
-		value: IntegerTypes{},
-		refStrings: []string{
+		Name:  "integer",
+		Value: IntegerTypes{},
+		RefStrings: []string{
 			`TypeRefs.IntegerTypes:{}`,
 			`TypeRefs.IntegerTypes:{}.Int:integer`,
 			`TypeRefs.IntegerTypes:{}.Int16:integer`,
@@ -355,7 +349,7 @@ var typeTests = []TestCase{
 			`TypeRefs.IntegerTypes:{}.Uintptr:integer`,
 			`Root.{}:IntegerTypes`,
 		},
-		derefStrings: []string{
+		DerefStrings: []string{
 			`Root.{}`,
 			`Root.{}.Int:integer`,
 			`Root.{}.Int16:integer`,
@@ -369,7 +363,7 @@ var typeTests = []TestCase{
 			`Root.{}.Uint8:integer`,
 			`Root.{}.Uintptr:integer`,
 		},
-		openapiStrings: []string{
+		OpenAPIStrings: []string{
 			`openapi: 3.0.0`,
 			`components:`,
 			`  schemas:`,
@@ -414,20 +408,20 @@ var typeTests = []TestCase{
 		},
 	},
 	{
-		name:  `float`,
-		value: FloatTypes{},
-		refStrings: []string{
+		Name:  `float`,
+		Value: FloatTypes{},
+		RefStrings: []string{
 			`TypeRefs.FloatTypes:{}`,
 			`TypeRefs.FloatTypes:{}.Float32:float`,
 			`TypeRefs.FloatTypes:{}.Float64:float`,
 			`Root.{}:FloatTypes`,
 		},
-		derefStrings: []string{
+		DerefStrings: []string{
 			`Root.{}`,
 			`Root.{}.Float32:float`,
 			`Root.{}.Float64:float`,
 		},
-		openapiStrings: []string{
+		OpenAPIStrings: []string{
 			`openapi: 3.0.0`,
 			`components:`,
 			`  schemas:`,
@@ -453,18 +447,18 @@ var typeTests = []TestCase{
 		},
 	},
 	{
-		name:  "string",
-		value: StringTypes{},
-		refStrings: []string{
+		Name:  "string",
+		Value: StringTypes{},
+		RefStrings: []string{
 			`TypeRefs.StringTypes:{}`,
 			`TypeRefs.StringTypes:{}.String:string`,
 			`Root.{}:StringTypes`,
 		},
-		derefStrings: []string{
+		DerefStrings: []string{
 			`Root.{}`,
 			`Root.{}.String:string`,
 		},
-		openapiStrings: []string{
+		OpenAPIStrings: []string{
 			`openapi: 3.0.0`,
 			`components:`,
 			`  schemas:`,
@@ -487,9 +481,9 @@ var typeTests = []TestCase{
 		},
 	},
 	{
-		name:  "invalid",
-		value: InvalidTypes{},
-		refStrings: []string{
+		Name:  "invalid",
+		Value: InvalidTypes{},
+		RefStrings: []string{
 			`TypeRefs.InvalidTypes:{}`,
 			`TypeRefs.InvalidTypes:{}.!Chan:invalid:chan! ERROR:kind not supported`,
 			`TypeRefs.InvalidTypes:{}.!Complex128:invalid:complex128! ERROR:kind not supported`,
@@ -498,7 +492,7 @@ var typeTests = []TestCase{
 			`TypeRefs.InvalidTypes:{}."!UnsafePointer:invalid:unsafe.Pointer!" ERROR:kind not supported`,
 			`Root.{}:InvalidTypes`,
 		},
-		derefStrings: []string{
+		DerefStrings: []string{
 			`Root.{}`,
 			`Root.{}.!Chan:invalid:chan! ERROR:kind not supported`,
 			`Root.{}.!Complex128:invalid:complex128! ERROR:kind not supported`,
@@ -506,7 +500,7 @@ var typeTests = []TestCase{
 			`Root.{}.!Func:invalid:func! ERROR:kind not supported`,
 			`Root.{}."!UnsafePointer:invalid:unsafe.Pointer!" ERROR:kind not supported`,
 		},
-		openapiStrings: []string{
+		OpenAPIStrings: []string{
 			`openapi: 3.0.0`,
 			`components:`,
 			`  schemas:`,
@@ -542,9 +536,9 @@ var typeTests = []TestCase{
 		},
 	},
 	{
-		name:  "compound",
-		value: CompoundTypes{},
-		refStrings: []string{
+		Name:  "compound",
+		Value: CompoundTypes{},
+		RefStrings: []string{
 			`TypeRefs.CompoundTypes:{}`,
 			`TypeRefs.CompoundTypes:{}.Array0:[]`,
 			`TypeRefs.CompoundTypes:{}.Array0:[].string`,
@@ -562,7 +556,7 @@ var typeTests = []TestCase{
 			`TypeRefs.StringStruct:{}.Value:string`,
 			`Root.{}:CompoundTypes`,
 		},
-		derefStrings: []string{
+		DerefStrings: []string{
 			`Root.{}`,
 			`Root.{}.Array0:[]`,
 			`Root.{}.Array0:[].string`,
@@ -577,7 +571,7 @@ var typeTests = []TestCase{
 			`Root.{}.Slice:[].!invalid! ERROR:interface element is nil`,
 			`Root.{}.!Struct:{}! ERROR:empty struct not supported`,
 		},
-		openapiStrings: []string{
+		OpenAPIStrings: []string{
 			`openapi: 3.0.0`,
 			`components:`,
 			`  schemas:`,
@@ -635,18 +629,18 @@ var typeTests = []TestCase{
 		},
 	},
 	{
-		name:  "special",
-		value: SpecialTypes{},
-		refStrings: []string{
+		Name:  "special",
+		Value: SpecialTypes{},
+		RefStrings: []string{
 			`TypeRefs.SpecialTypes:{}`,
 			`TypeRefs.SpecialTypes:{}.DateTime:datetime`,
 			`Root.{}:SpecialTypes`,
 		},
-		derefStrings: []string{
+		DerefStrings: []string{
 			`Root.{}`,
 			`Root.{}.DateTime:datetime`,
 		},
-		openapiStrings: []string{
+		OpenAPIStrings: []string{
 			`openapi: 3.0.0`,
 			`components:`,
 			`  schemas:`,
@@ -694,11 +688,11 @@ var jsonArrayTest = `
 `
 
 // Array tests.
-var listTests = []TestCase{
+var listTests = []fixtures.TestCase{
 	{
-		name:  "arrays",
-		value: &ArrayStruct{},
-		refStrings: []string{
+		Name:  "arrays",
+		Value: &ArrayStruct{},
+		RefStrings: []string{
 			`TypeRefs.ArrayStruct:{}`,
 			`TypeRefs.ArrayStruct:{}.Array0:[]`,
 			`TypeRefs.ArrayStruct:{}.Array0:[].string`,
@@ -709,7 +703,7 @@ var listTests = []TestCase{
 			`TypeRefs.ArrayStruct:{}.Array3:[].string`,
 			`Root.{}:ArrayStruct`,
 		},
-		derefStrings: []string{
+		DerefStrings: []string{
 			`Root.{}`,
 			`Root.{}.Array0:[]`,
 			`Root.{}.Array0:[].string`,
@@ -719,7 +713,7 @@ var listTests = []TestCase{
 			`Root.{}.Array3:[]`,
 			`Root.{}.Array3:[].string`,
 		},
-		openapiStrings: []string{
+		OpenAPIStrings: []string{
 			`openapi: 3.0.0`,
 			`components:`,
 			`  schemas:`,
@@ -754,9 +748,9 @@ var listTests = []TestCase{
 		},
 	},
 	{
-		name:  "json-array",
-		value: fromJSON([]byte(jsonArrayTest)),
-		refStrings: []string{
+		Name:  "json-array",
+		Value: fromJSON([]byte(jsonArrayTest)),
+		RefStrings: []string{
 			`Root.{}`,
 			`Root.{}.Array0:[]`,
 			`Root.{}.Array0:[].!invalid! ERROR:interface element is nil`,
@@ -766,7 +760,7 @@ var listTests = []TestCase{
 			`Root.{}.Array3:[]`,
 			`Root.{}.Array3:[].string`,
 		},
-		derefStrings: []string{
+		DerefStrings: []string{
 			`Root.{}`,
 			`Root.{}.Array0:[]`,
 			`Root.{}.Array0:[].!invalid! ERROR:interface element is nil`,
@@ -776,7 +770,7 @@ var listTests = []TestCase{
 			`Root.{}.Array3:[]`,
 			`Root.{}.Array3:[].string`,
 		},
-		openapiStrings: []string{
+		OpenAPIStrings: []string{
 			`openapi: 3.0.0`,
 			`paths:`,
 			`  /test/path:`,
@@ -809,9 +803,9 @@ var listTests = []TestCase{
 		},
 	},
 	{
-		name:  "slices",
-		value: &SliceStruct{},
-		refStrings: []string{
+		Name:  "slices",
+		Value: &SliceStruct{},
+		RefStrings: []string{
 			`TypeRefs.SliceStruct:{}`,
 			`TypeRefs.SliceStruct:{}.Array2:[]`,
 			`TypeRefs.SliceStruct:{}.Array2:[].[]`,
@@ -820,7 +814,7 @@ var listTests = []TestCase{
 			`TypeRefs.SliceStruct:{}.Slice:[].string`,
 			`Root.{}:SliceStruct`,
 		},
-		derefStrings: []string{
+		DerefStrings: []string{
 			`Root.{}`,
 			`Root.{}.Array2:[]`,
 			`Root.{}.Array2:[].[]`,
@@ -828,7 +822,7 @@ var listTests = []TestCase{
 			`Root.{}.Slice:[]`,
 			`Root.{}.Slice:[].string`,
 		},
-		openapiStrings: []string{
+		OpenAPIStrings: []string{
 			`openapi: 3.0.0`,
 			`components:`,
 			`  schemas:`,
@@ -896,11 +890,11 @@ var jsonMapTests = `
 }
 `
 
-var compoundTests = []TestCase{
+var compoundTests = []fixtures.TestCase{
 	{
-		name:  "golang-map",
-		value: MapTestsStruct{},
-		refStrings: []string{
+		Name:  "golang-map",
+		Value: MapTestsStruct{},
+		RefStrings: []string{
 			`TypeRefs.MapTestsStruct:{}`,
 			`TypeRefs.MapTestsStruct:{}.MapOK:{}`,
 			`TypeRefs.MapTestsStruct:{}.MapOK:{}.BoolVal:boolean`,
@@ -916,7 +910,7 @@ var compoundTests = []TestCase{
 			`TypeRefs.MapTestsStruct:{}.MapOK:{}.StringVal:string`,
 			`Root.{}:MapTestsStruct`,
 		},
-		derefStrings: []string{
+		DerefStrings: []string{
 			`Root.{}`,
 			`Root.{}.MapOK:{}`,
 			`Root.{}.MapOK:{}.BoolVal:boolean`,
@@ -931,7 +925,7 @@ var compoundTests = []TestCase{
 			`Root.{}.MapOK:{}.MapVal:{}.Key2:{}.DeepKey2:float`,
 			`Root.{}.MapOK:{}.StringVal:string`,
 		},
-		openapiStrings: []string{
+		OpenAPIStrings: []string{
 			`openapi: 3.0.0`,
 			`components:`,
 			`  schemas:`,
@@ -982,9 +976,9 @@ var compoundTests = []TestCase{
 		},
 	},
 	{
-		name:  "json-map",
-		value: fromJSON([]byte(jsonMapTests)),
-		refStrings: []string{
+		Name:  "json-map",
+		Value: fromJSON([]byte(jsonMapTests)),
+		RefStrings: []string{
 			`Root.{}`,
 			`Root.{}.MapOK:{}`,
 			`Root.{}.MapOK:{}.BoolVal:boolean`,
@@ -999,7 +993,7 @@ var compoundTests = []TestCase{
 			`Root.{}.MapOK:{}.MapVal:{}.Key2:{}.DeepKey2:float`,
 			`Root.{}.MapOK:{}.StringVal:string`,
 		},
-		derefStrings: []string{
+		DerefStrings: []string{
 			`Root.{}`,
 			`Root.{}.MapOK:{}`,
 			`Root.{}.MapOK:{}.BoolVal:boolean`,
@@ -1014,7 +1008,7 @@ var compoundTests = []TestCase{
 			`Root.{}.MapOK:{}.MapVal:{}.Key2:{}.DeepKey2:float`,
 			`Root.{}.MapOK:{}.StringVal:string`,
 		},
-		openapiStrings: []string{
+		OpenAPIStrings: []string{
 			`openapi: 3.0.0`,
 			`paths:`,
 			`  /test/path:`,
@@ -1069,11 +1063,11 @@ type ReferenceTestsStruct struct {
 	PtrPtrVal    **BasicStruct
 }
 
-var referenceTests = []TestCase{
+var referenceTests = []fixtures.TestCase{
 	{
-		name:  "reference-tests-empty",
-		value: ReferenceTestsStruct{},
-		refStrings: []string{
+		Name:  "reference-tests-empty",
+		Value: ReferenceTestsStruct{},
+		RefStrings: []string{
 			`TypeRefs.BasicStruct:{}`,
 			`TypeRefs.BasicStruct:{}.BoolVal:boolean`,
 			`TypeRefs.BasicStruct:{}.Float64Val:float`,
@@ -1085,7 +1079,7 @@ var referenceTests = []TestCase{
 			`TypeRefs.ReferenceTestsStruct:{}.PtrVal:{}:BasicStruct`,
 			`Root.{}:ReferenceTestsStruct`,
 		},
-		derefStrings: []string{
+		DerefStrings: []string{
 			`Root.{}`,
 			`Root.{}.!InterfaceVal:invalid! ERROR:interface element is nil`,
 			`Root.{}.PtrPtrVal:{}`,
@@ -1101,9 +1095,9 @@ var referenceTests = []TestCase{
 		},
 	},
 	{
-		name:  "reference-tests-init",
-		value: ReferenceTestsStruct{InterfaceVal: &BasicStruct{}},
-		refStrings: []string{
+		Name:  "reference-tests-init",
+		Value: ReferenceTestsStruct{InterfaceVal: &BasicStruct{}},
+		RefStrings: []string{
 			`TypeRefs.BasicStruct:{}`,
 			`TypeRefs.BasicStruct:{}.BoolVal:boolean`,
 			`TypeRefs.BasicStruct:{}.Float64Val:float`,
@@ -1115,7 +1109,7 @@ var referenceTests = []TestCase{
 			`TypeRefs.ReferenceTestsStruct:{}.PtrVal:{}:BasicStruct`,
 			`Root.{}:ReferenceTestsStruct`,
 		},
-		derefStrings: []string{
+		DerefStrings: []string{
 			`Root.{}`,
 			`Root.{}.InterfaceVal:{}`,
 			`Root.{}.InterfaceVal:{}.BoolVal:boolean`,
@@ -1133,7 +1127,7 @@ var referenceTests = []TestCase{
 			`Root.{}.PtrVal:{}.IntVal:integer`,
 			`Root.{}.PtrVal:{}.StringVal:string`,
 		},
-		openapiStrings: []string{
+		OpenAPIStrings: []string{
 			`openapi: 3.0.0`,
 			`components:`,
 			`  schemas:`,
@@ -1201,11 +1195,11 @@ type CycleTest struct {
 	}
 }
 
-var cycleTests = []TestCase{
+var cycleTests = []fixtures.TestCase{
 	{
-		name:  "cycle-test",
-		value: &CycleTest{},
-		refStrings: []string{
+		Name:  "cycle-test",
+		Value: &CycleTest{},
+		RefStrings: []string{
 			`TypeRefs.AStruct:{}`,
 			`TypeRefs.AStruct:{}.AChild:{}:BStruct`,
 			`TypeRefs.AStruct:{}.AName:string`,
@@ -1223,7 +1217,7 @@ var cycleTests = []TestCase{
 			`TypeRefs.CycleTest:{}.Level:integer`,
 			`Root.{}:CycleTest`,
 		},
-		derefStrings: []string{
+		DerefStrings: []string{
 			`Root.{}`,
 			`Root.{}.CycleA:{}`,
 			`Root.{}.CycleA:{}.AChild:{}`,
@@ -1249,7 +1243,7 @@ var cycleTests = []TestCase{
 			`Root.{}.CycleC:{}.C:{}.CName:string`,
 			`Root.{}.Level:integer`,
 		},
-		jsonStrings: []string{
+		JSONStrings: []string{
 			`definitions.cycleA:{}`,
 			`definitions.cycleA:{}.aChild:{}:BStruct`,
 			`definitions.cycleA:{}.aName:string`,
@@ -1266,7 +1260,7 @@ var cycleTests = []TestCase{
 			`definitions.CycleTest:{}.CycleC:{}.c:{}:CStruct`,
 			`$.{}:CycleTest`,
 		},
-		openapiStrings: []string{
+		OpenAPIStrings: []string{
 			`openapi: 3.0.0`,
 			`components:`,
 			`  schemas:`,
@@ -1325,11 +1319,11 @@ type JSONTagTests struct {
 	RenameTwo  string `json:"something"`
 }
 
-var jsonTagTests = []TestCase{
+var jsonTagTests = []fixtures.TestCase{
 	{
-		name:  "json-tags",
-		value: JSONTagTests{},
-		refStrings: []string{
+		Name:  "json-tags",
+		Value: JSONTagTests{},
+		RefStrings: []string{
 			`TypeRefs.JSONTagTests:{}`,
 			`TypeRefs.JSONTagTests:{}.ExcludeTag:string`,
 			`TypeRefs.JSONTagTests:{}.NoTag:string`,
@@ -1337,21 +1331,21 @@ var jsonTagTests = []TestCase{
 			`TypeRefs.JSONTagTests:{}.RenameTwo:string`,
 			`Root.{}:JSONTagTests`,
 		},
-		derefStrings: []string{
+		DerefStrings: []string{
 			`Root.{}`,
 			`Root.{}.ExcludeTag:string`,
 			`Root.{}.NoTag:string`,
 			`Root.{}.RenameOne:string`,
 			`Root.{}.RenameTwo:string`,
 		},
-		jsonStrings: []string{
+		JSONStrings: []string{
 			`definitions.JSONTagTests:{}`,
 			`definitions.JSONTagTests:{}.NoTag:string`,
 			`definitions.JSONTagTests:{}.renameOne:string`,
 			`definitions.JSONTagTests:{}.something:string`,
 			`$.{}:JSONTagTests`,
 		},
-		openapiStrings: []string{
+		OpenAPIStrings: []string{
 			`openapi: 3.0.0`,
 			`components:`,
 			`  schemas:`,
@@ -1379,45 +1373,45 @@ var jsonTagTests = []TestCase{
 	},
 }
 
-var structTests = []TestCase{
-	// {name: "struct-empty", value: func() interface{} { var g struct{}; return g }()},
-	// {name: "PrivateStruct-nil", value: func() interface{} { var g PrivateStruct; return g }()},
-	{name: "BasicStruct-nil", value: func() interface{} { var g BasicStruct; return g }()},
-	// {name: "CompoundStruct-nil", value: func() interface{} { var g CompoundStruct; return g }()},
-	// {name: "CycleTest-nil", value: func() interface{} { var g CycleTest; return g }()},
+var structTests = []fixtures.TestCase{
+	// {Name: "struct-empty", Value: func() interface{} { var g struct{}; return g }()},
+	// {Name: "PrivateStruct-nil", Value: func() interface{} { var g PrivateStruct; return g }()},
+	{Name: "BasicStruct-nil", Value: func() interface{} { var g BasicStruct; return g }()},
+	// {Name: "CompoundStruct-nil", Value: func() interface{} { var g CompoundStruct; return g }()},
+	// {Name: "CycleTest-nil", Value: func() interface{} { var g CycleTest; return g }()},
 }
 
 //
-//{name: "makeJSON, value", value: makeJSON(nil)},
+//{Name: "makeJSON, value", Value: makeJSON(nil)},
 
-var testCases = []TestCase{
-	{name: "GoodEntity, var", value: func() interface{} { var g GoodEntity; return g }()},
-	{name: "GoodEntity, empty", value: GoodEntity{}},
-	{name: "GoodEntity, values", value: GoodEntity{
+var testCases = []fixtures.TestCase{
+	{Name: "GoodEntity, var", Value: func() interface{} { var g GoodEntity; return g }()},
+	{Name: "GoodEntity, empty", Value: GoodEntity{}},
+	{Name: "GoodEntity, values", Value: GoodEntity{
 		Message: "hello",
 		IntVal:  123,
 		Same:    true,
 		secret:  "shh",
 	}},
 
-	{name: "map[string]bool, values", value: map[string]bool{"trueVal": true, "falseVal": false}},
+	{Name: "map[string]bool, values", Value: map[string]bool{"trueVal": true, "falseVal": false}},
 
-	{name: "[]*MainStruct, nil", value: []*MainStruct{}},
-	{name: "[0]*MainStruct, nil", value: [0]*MainStruct{}},
-	{name: "[1]*MainStruct, nil", value: [1]*MainStruct{}},
+	{Name: "[]*MainStruct, nil", Value: []*MainStruct{}},
+	{Name: "[0]*MainStruct, nil", Value: [0]*MainStruct{}},
+	{Name: "[1]*MainStruct, nil", Value: [1]*MainStruct{}},
 
-	{name: "*GoodEntity, var", value: func() interface{} { var g *GoodEntity; return g }()},
-	{name: "*GoodEntity, empty", value: &GoodEntity{}},
-	{name: "*GoodEntity, values", value: &GoodEntity{
+	{Name: "*GoodEntity, var", Value: func() interface{} { var g *GoodEntity; return g }()},
+	{Name: "*GoodEntity, empty", Value: &GoodEntity{}},
+	{Name: "*GoodEntity, values", Value: &GoodEntity{
 		Message: "hello",
 		IntVal:  123,
 		Same:    true,
 		secret:  "shh",
 	}},
 
-	{name: "*OtherEntity, var", value: func() interface{} { var g *OtherEntity; return g }()},
-	{name: "*OtherEntity, empty", value: &OtherEntity{}},
-	{name: "*OtherEntity, values", value: &OtherEntity{
+	{Name: "*OtherEntity, var", Value: func() interface{} { var g *OtherEntity; return g }()},
+	{Name: "*OtherEntity, empty", Value: &OtherEntity{}},
+	{Name: "*OtherEntity, values", Value: &OtherEntity{
 		Status:   "ok",
 		IntVal:   123,
 		FloatVal: 234.345,
@@ -1426,7 +1420,7 @@ var testCases = []TestCase{
 		Good:     GoodEntity{},
 	}},
 
-	{name: "NamedEntity, empty", value: &NamedEntity{}},
+	{Name: "NamedEntity, empty", Value: &NamedEntity{}},
 }
 
 // StringStruct has one string field.
@@ -1648,83 +1642,14 @@ func makeJSON(x interface{}) interface{} {
 	}
 }
 
-func compareStrings(t *testing.T, testName string, gotStrings, wantStrings []string) {
-	// Split strings into lines.
-	gotLines := []string{}
-	for _, line := range gotStrings {
-		lines := strings.Split(line, "\n")
-		gotLines = append(gotLines, lines...)
-	}
-	wantLines := []string{}
-	for _, line := range wantStrings {
-		lines := strings.Split(line, "\n")
-		wantLines = append(wantLines, lines...)
-	}
-
-	if !reflect.DeepEqual(gotLines, wantLines) {
-		t.Errorf("TEST_FAIL %s", testName)
-
-		maxLen := len(gotLines)
-		if len(wantLines) > maxLen {
-			maxLen = len(wantLines)
-		}
-
-		type diffStruct struct {
-			got, want string
-		}
-		diff := []*diffStruct{}
-
-		for i := 0; i < maxLen; i++ {
-			newDiff := &diffStruct{}
-
-			if i < len(gotLines) {
-				newDiff.got = gotLines[i]
-			}
-
-			if i < len(wantLines) {
-				newDiff.want = wantLines[i]
-			}
-
-			diff = append(diff, newDiff)
-		}
-
-		// Dump got and want lines.
-		outLines := []string{}
-
-		outLines = append(outLines, "***** GOT:")
-		for i, newDiff := range diff {
-			flag := " "
-			if newDiff.got != newDiff.want {
-				flag = ">"
-			}
-
-			outLines = append(outLines, fmt.Sprintf("%05d%s| %s", i, flag, newDiff.got))
-		}
-
-		outLines = append(outLines, "***** WANT:")
-		for i, newDiff := range diff {
-			flag := " "
-			if newDiff.got != newDiff.want {
-				flag = ">"
-			}
-
-			outLines = append(outLines, fmt.Sprintf("%05d%s| %s", i, flag, newDiff.want))
-		}
-
-		t.Errorf("TEST_FAIL %s\n%s", testName, strings.Join(outLines, "\n"))
-	} else {
-		t.Logf("TEST_OK %s", testName)
-	}
-}
-
-func runTests(t *testing.T, testCases []TestCase) {
+func runTests(t *testing.T, testCases []fixtures.TestCase) {
 	r := reflector.NewReflector()
 
 	for _, test := range testCases {
 		r.Reset()
 		//r.Label = test.name
 
-		gotResult := r.DeriveSchema(test.value)
+		gotResult := r.DeriveSchema(test.Value)
 
 		// if b, err := json.MarshalIndent(gotResult, "", "  "); err != nil {
 		// 	t.Errorf("TEST_FAIL %s: json.Marshal err=%s", test.name, err)
@@ -1736,45 +1661,54 @@ func runTests(t *testing.T, testCases []TestCase) {
 			opt := renderer.NewOptions()
 			opt.DeReference = i == 1
 
-			r := renderer.NewSimpleRenderer(opt)
-			gotStrings, _ := r.ProcessResult(gotResult)
+			r := simple.NewSimpleRenderer(opt)
+			gotStrings, _ := r.ProcessSchema(gotResult)
 
 			var wantStrings []string
 			if opt.DeReference {
-				wantStrings = test.derefStrings
+				wantStrings = test.DerefStrings
 			} else {
-				wantStrings = test.refStrings
+				wantStrings = test.RefStrings
 			}
 
-			testName := fmt.Sprintf("%s: deref=%t", test.name, opt.DeReference)
-			compareStrings(t, testName, gotStrings, wantStrings)
+			testName := fmt.Sprintf("%s: deref=%t", test.Name, opt.DeReference)
+			util.CompareStrings(t, testName, gotStrings, wantStrings)
 		}
 
 		// Test json dialect.
-		if len(test.jsonStrings) > 0 {
+		if len(test.JSONStrings) > 0 {
 			opt := renderer.NewOptions()
 			opt.DeReference = false
 
-			r := renderer.NewJSONRenderer(opt)
-			gotStrings, _ := r.ProcessResult(gotResult)
-			wantStrings := test.jsonStrings
+			r := json2.NewJSONRenderer(opt)
+			gotStrings, _ := r.ProcessSchema(gotResult)
+			wantStrings := test.JSONStrings
 
-			testName := fmt.Sprintf("%s: dialect=json", test.name)
-			compareStrings(t, testName, gotStrings, wantStrings)
+			testName := fmt.Sprintf("%s: dialect=json", test.Name)
+			util.CompareStrings(t, testName, gotStrings, wantStrings)
 		}
 
 		// Test OpenAPI schema.
-		if len(test.openapiStrings) > 0 {
+		if len(test.OpenAPIStrings) > 0 {
 			opt := renderer.NewOptions()
 			opt.DeReference = false
 			opt.Indent = 0
 
-			r := renderer.NewOpenAPIRenderer("/test/path", opt)
-			gotStrings, _ := r.ProcessResult(gotResult)
-			wantStrings := test.openapiStrings
+			r := openapi.NewOpenAPIRenderer("/test/path", opt)
+			gotStrings, _ := r.ProcessSchema(gotResult)
+			wantStrings := test.OpenAPIStrings
 
-			testName := fmt.Sprintf("%s: dialect=openapi", test.name)
-			compareStrings(t, testName, gotStrings, wantStrings)
+			testName := fmt.Sprintf("%s: dialect=openapi", test.Name)
+			util.CompareStrings(t, testName, gotStrings, wantStrings)
+
+			// Verify that YAML is valid.
+			yamlStr := strings.Join(gotStrings, "\n")
+			var yamlOut interface{}
+			if err := yaml.Unmarshal([]byte(yamlStr), &yamlOut); err != nil {
+				t.Errorf("TEST_FAIL %s: yaml err=%s", test.Name, err)
+			} else {
+				t.Logf("TEST_OK %s: yaml", test.Name)
+			}
 		}
 	}
 }
