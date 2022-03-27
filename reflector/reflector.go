@@ -35,10 +35,7 @@ func (r *Reflector) Reset() *Reflector {
 	// Initialize state.
 	idgen.Reset()
 
-	r.Schema = &types.Schema{
-		Root:     types.NewRootElement("Root", NATIVE_DIALECT),
-		TypeRefs: types.NewRootElement("TypeRefs", NATIVE_DIALECT),
-	}
+	r.Schema = types.NewSchema(NATIVE_DIALECT)
 
 	// Return *Reflector for chaining.
 	return r
@@ -51,7 +48,7 @@ func (r *Reflector) DeriveSchema(x interface{}) *types.Schema {
 	}
 
 	// Start recursive reflection.
-	r.reflectTypeImpl(types.NewAncestorTypeRef(), r.Schema.Root.NewChild(""), reflect.ValueOf(x), nil)
+	r.reflectTypeImpl(types.NewAncestorTypeRef(), r.Schema.RootNode().NewChild(""), reflect.ValueOf(x), nil)
 
 	return r.Schema
 }
@@ -59,15 +56,15 @@ func (r *Reflector) DeriveSchema(x interface{}) *types.Schema {
 // reflectTypeImpl is a recursive function to reflect Go values.
 //
 // Args:
-// - typeList (TypeList): list of TypeElement found so far
+// - typeList (TypeList): list of TypeNode found so far
 // - ancestoreTypeRef (AncestorTypeRef): keeps track of TypeRef names seen so far, used for cycle detection
-// - currentElem (*types.TypeElement): current TypeElement, must be initialized in caller!
+// - currentElem (*types.TypeNode): current TypeNode, must be initialized in caller!
 // - v (reflect.Value): Value of current element
 // - s (*reflect.StructField): pointer to StructField for current element if part of a struct
 //
 // Returns:
-// - TypeList: list of TypeElement after reflection
-func (r *Reflector) reflectTypeImpl(ancestorTypeRef types.AncestorTypeRef, currentElem *types.TypeElement, v reflect.Value, s *reflect.StructField) {
+// - TypeList: list of TypeNode after reflection
+func (r *Reflector) reflectTypeImpl(ancestorTypeRef types.AncestorTypeRef, currentElem *types.TypeNode, v reflect.Value, s *reflect.StructField) {
 	// currentElem must be initialized in caller!!!
 	if currentElem == nil {
 		panic("currentElem cannot be nil")
@@ -101,9 +98,11 @@ func (r *Reflector) reflectTypeImpl(ancestorTypeRef types.AncestorTypeRef, curre
 	}
 
 	// If parent is a root, the current element must be a struct or a Reference.
-	if currentElem.Parent == nil {
+	if currentElem.Parent == "" {
 		panic("parent is nil")
-	} else if currentElem.Parent.Type == generictype.Root.String() {
+	}
+
+	if currentElem.Node(currentElem.Parent).Type == generictype.Root.String() {
 		if genericType != generictype.Struct && genericType.Category() != typecategory.Reference {
 			currentElem.Error = types.RootKindErr
 			return
@@ -180,14 +179,14 @@ func (r *Reflector) reflectTypeImpl(ancestorTypeRef types.AncestorTypeRef, curre
 
 // addTypeRef adds a TypeRef for the current element.
 // - This function should only be called on an element with a TypeRef.
-func (r *Reflector) addTypeRef(currentElem *types.TypeElement) {
+func (r *Reflector) addTypeRef(currentElem *types.TypeNode) {
 	// Do nothing if the current element is not a TypeRef.
 	if currentElem.NativeDefault().TypeRef == "" {
 		return
 	}
 
 	// Skip if the TypeRef has already been captured.
-	if r.Schema.TypeRefs.ChildByName(currentElem.NativeDefault().TypeRef, nil) != nil {
+	if r.Schema.TypeRefNode().ChildByName(currentElem.NativeDefault().TypeRef, nil) != nil {
 		return
 	}
 
@@ -205,15 +204,15 @@ func (r *Reflector) addTypeRef(currentElem *types.TypeElement) {
 
 	r.typeRefRecursion(refElem)
 
-	r.Schema.TypeRefs.AddChild(refElem)
+	r.Schema.TypeRefNode().AddChild(refElem)
 }
 
-// typeRefRecursion is an internal recursive function to handle nested TypeRefs.
+// typeRefRecursion is an internal recursive function to handle nested TypeRefID.
 // - Recursively process elements.
 // - If TypeRef is found, process TypeRef then remove its children.
-func (r *Reflector) typeRefRecursion(currentElem *types.TypeElement) {
+func (r *Reflector) typeRefRecursion(currentElem *types.TypeNode) {
 	if currentElem.NativeDefault().TypeRef != "" {
-		// Add TypeRefs only if they are not cyclical errors.
+		// Add TypeRefID only if they are not cyclical errors.
 		if currentElem.Error != types.CyclicalReferenceErr {
 			r.addTypeRef(currentElem)
 			currentElem.RemoveAllChildren()
@@ -225,7 +224,8 @@ func (r *Reflector) typeRefRecursion(currentElem *types.TypeElement) {
 	}
 
 	// Keep current element and process children.
-	for _, childElem := range currentElem.Children {
+	for _, childID := range currentElem.Children {
+		childElem := currentElem.Node(childID)
 		r.typeRefRecursion(childElem)
 	}
 }
@@ -234,7 +234,7 @@ func (r *Reflector) typeRefRecursion(currentElem *types.TypeElement) {
 // Interface is a special case which is either:
 // - nil -- nil has no discernable type and is an error
 // - a wrapper around another type -- ignore the interface and continue reflection with the wrapped type
-func (r *Reflector) reflectTypeInterfaceImpl(ancestorTypeRef types.AncestorTypeRef, currentElem *types.TypeElement, v reflect.Value, s *reflect.StructField) {
+func (r *Reflector) reflectTypeInterfaceImpl(ancestorTypeRef types.AncestorTypeRef, currentElem *types.TypeNode, v reflect.Value, s *reflect.StructField) {
 	if v.IsZero() {
 		// nil is an invalid element because its type cannot be determined
 		currentElem.Type = "invalid"
@@ -251,7 +251,7 @@ func (r *Reflector) reflectTypeInterfaceImpl(ancestorTypeRef types.AncestorTypeR
 }
 
 // reflectTypePointerImpl refects on pointer types
-func (r *Reflector) reflectTypePointerImpl(ancestorTypeRef types.AncestorTypeRef, currentElem *types.TypeElement, v reflect.Value, s *reflect.StructField) {
+func (r *Reflector) reflectTypePointerImpl(ancestorTypeRef types.AncestorTypeRef, currentElem *types.TypeNode, v reflect.Value, s *reflect.StructField) {
 	// Pointer is a memory address pointing to some other type element.
 	currentElem.NativeDefault().Options.AddBool("IsNil", v.IsNil())
 
@@ -278,7 +278,7 @@ func (r *Reflector) reflectTypePointerImpl(ancestorTypeRef types.AncestorTypeRef
 // Array and Slice represent lists of elements.
 // - 1st element of list will be used to determine element type
 // - If list is empty, ancestorTypeRef one-element list will be created to use for typing.
-func (r *Reflector) reflectTypeListImpl(ancestorTypeRef types.AncestorTypeRef, currentElem *types.TypeElement, v reflect.Value, s *reflect.StructField) {
+func (r *Reflector) reflectTypeListImpl(ancestorTypeRef types.AncestorTypeRef, currentElem *types.TypeNode, v reflect.Value, s *reflect.StructField) {
 	// Value for next reflect iteration.
 	var targetValue reflect.Value
 
@@ -320,7 +320,7 @@ func (r *Reflector) reflectTypeListImpl(ancestorTypeRef types.AncestorTypeRef, c
 	if listHasElements {
 		// Check all slice elements to verify that they are all the same kind.
 		kindsFound := map[string]int{}
-		childElem := []*types.TypeElement{}
+		childElem := []*types.TypeNode{}
 
 		for i := 0; i < v.Len(); i++ {
 			nextElem := currentElem.NewChild("")
@@ -364,7 +364,7 @@ func (r *Reflector) reflectTypeListImpl(ancestorTypeRef types.AncestorTypeRef, c
 // Struct and Map represent key-value pairs.
 // - Struct keys are field names which are always strings.
 // - Map keys can be any comprable Go type.
-func (r *Reflector) reflectTypeStructImpl(ancestorTypeRef types.AncestorTypeRef, currentElem *types.TypeElement, v reflect.Value, s *reflect.StructField) {
+func (r *Reflector) reflectTypeStructImpl(ancestorTypeRef types.AncestorTypeRef, currentElem *types.TypeNode, v reflect.Value, s *reflect.StructField) {
 	switch v.Kind() {
 	case reflect.Struct:
 		if currentElem.Error == "" {

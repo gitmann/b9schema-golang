@@ -12,8 +12,8 @@ func RenderSchema(schema *types.Schema, r Renderer) []string {
 
 	// Print type refs.
 	if !r.DeReference() {
-		if len(schema.TypeRefs.Children) > 0 {
-			rendered := RenderType(schema.TypeRefs, r)
+		if len(schema.TypeRefNode().Children) > 0 {
+			rendered := RenderType(schema.TypeRefNode(), r)
 			for _, r := range rendered {
 				if r != "" {
 					out = append(out, r)
@@ -23,8 +23,8 @@ func RenderSchema(schema *types.Schema, r Renderer) []string {
 	}
 
 	//	Print types.
-	if len(schema.Root.Children) > 0 {
-		rendered := RenderType(schema.Root, r)
+	if len(schema.RootNode().Children) > 0 {
+		rendered := RenderType(schema.RootNode(), r)
 		for _, r := range rendered {
 			if r != "" {
 				out = append(out, r)
@@ -36,8 +36,8 @@ func RenderSchema(schema *types.Schema, r Renderer) []string {
 	return out
 }
 
-// RenderType builds strings for a TypeElement and its children.
-func RenderType(t *types.TypeElement, r Renderer) []string {
+// RenderType builds strings for a TypeNode and its children.
+func RenderType(t *types.TypeNode, r Renderer) []string {
 	// Capture initial indent and restore on exit.
 	originalIndent := r.Indent()
 

@@ -47,7 +47,7 @@ func (r *SimpleRenderer) Prefix() string {
 	return strings.Repeat(r.opt.Prefix, r.opt.Indent)
 }
 
-func (r *SimpleRenderer) Pre(t *types.TypeElement) []string {
+func (r *SimpleRenderer) Pre(t *types.TypeNode) []string {
 	if t.Type == generictype.Root.String() {
 		return []string{}
 	}
@@ -62,18 +62,18 @@ func (r *SimpleRenderer) Pre(t *types.TypeElement) []string {
 	return []string{out}
 }
 
-func (r *SimpleRenderer) Post(t *types.TypeElement) []string {
+func (r *SimpleRenderer) Post(t *types.TypeNode) []string {
 	return []string{}
 }
 
-// Path is a function that builds a path string from a TypeElement.
+// Path is a function that builds a path string from a TypeNode.
 // Format is: [<Name>:]<Type>[:<TypeRef>]
 // - If Name is set, prefix with "Name", otherwise "-"
 // - If TypeRef is set, suffix with "TypeRef", otherwise "-"
 // - If Error is set, wrap entire string with "!"
-func (r *SimpleRenderer) Path(t *types.TypeElement) []string {
-	if t.Parent == nil {
-		// Root element. Start a new path.
+func (r *SimpleRenderer) Path(t *types.TypeNode) []string {
+	if t.Parent == "" {
+		// RootID element. Start a new path.
 		return []string{t.Name}
 	}
 
@@ -115,5 +115,5 @@ func (r *SimpleRenderer) Path(t *types.TypeElement) []string {
 		path = fmt.Sprintf("%q", path)
 	}
 
-	return append(r.Path(t.Parent), path)
+	return append(r.Path(t.Node(t.Parent)), path)
 }

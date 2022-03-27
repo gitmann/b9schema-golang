@@ -66,7 +66,7 @@ func (r *OpenAPIRenderer) Prefix() string {
 	return strings.Repeat(r.opt.Prefix, r.opt.Indent)
 }
 
-func (r *OpenAPIRenderer) Pre(t *types.TypeElement) []string {
+func (r *OpenAPIRenderer) Pre(t *types.TypeNode) []string {
 	jsonType := t.GetNativeType("json")
 	if jsonType.Include == threeflag.False {
 		// Skip this element.
@@ -75,7 +75,7 @@ func (r *OpenAPIRenderer) Pre(t *types.TypeElement) []string {
 
 	// Special handling for root elements.
 	if t.Type == generictype.Root.String() {
-		if t.Name == "Root" {
+		if t.Name == "RootID" {
 			// Build an API path.
 			out := []string{r.Prefix() + `paths:`}
 
@@ -104,8 +104,8 @@ func (r *OpenAPIRenderer) Pre(t *types.TypeElement) []string {
 
 			r.SetIndent(r.Indent() + 1)
 			return out
-		} else if t.Name == "TypeRefs" {
-			// Store TypeRefs under the SCHEMA_PATH key.
+		} else if t.Name == "TypeRefID" {
+			// Store TypeRefID under the SCHEMA_PATH key.
 			tokens := strings.Split(SCHEMA_PATH, "/")
 
 			out := []string{}
@@ -189,11 +189,11 @@ func (r *OpenAPIRenderer) Pre(t *types.TypeElement) []string {
 	return outLines
 }
 
-func (r *OpenAPIRenderer) Post(t *types.TypeElement) []string {
+func (r *OpenAPIRenderer) Post(t *types.TypeNode) []string {
 	return []string{}
 }
 
-// Path is a function that builds a path string from a TypeElement.
-func (r *OpenAPIRenderer) Path(t *types.TypeElement) []string {
+// Path is a function that builds a path string from a TypeNode.
+func (r *OpenAPIRenderer) Path(t *types.TypeNode) []string {
 	return []string{}
 }

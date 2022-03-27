@@ -48,7 +48,7 @@ func (r *JSONRenderer) Prefix() string {
 	return strings.Repeat(r.opt.Prefix, r.opt.Indent)
 }
 
-func (r *JSONRenderer) Pre(t *types.TypeElement) []string {
+func (r *JSONRenderer) Pre(t *types.TypeNode) []string {
 	jsonType := t.GetNativeType("json")
 	if jsonType.Include == threeflag.False {
 		// Skip this element.
@@ -78,23 +78,23 @@ func (r *JSONRenderer) Pre(t *types.TypeElement) []string {
 	return []string{out}
 }
 
-func (r *JSONRenderer) Post(t *types.TypeElement) []string {
+func (r *JSONRenderer) Post(t *types.TypeNode) []string {
 	return []string{}
 }
 
-// Path is a function that builds a path string from a TypeElement.
+// Path is a function that builds a path string from a TypeNode.
 // Format is: [<Name>:]<Type>[:<TypeRef>]
 // - If Name is set, prefix with "Name", otherwise "-"
 // - If TypeRef is set, suffix with "TypeRef", otherwise "-"
 // - If Error is set, wrap entire string with "!"
-func (r *JSONRenderer) Path(t *types.TypeElement) []string {
+func (r *JSONRenderer) Path(t *types.TypeNode) []string {
 	// Check root.
 	if t.Type == generictype.Root.String() {
 		switch t.Name {
-		case "Root":
+		case "RootID":
 			// JSON Path root is "$"
 			return []string{"$"}
-		case "TypeRefs":
+		case "TypeRefID":
 			return []string{"definitions"}
 		default:
 			return []string{t.Name}
@@ -145,5 +145,5 @@ func (r *JSONRenderer) Path(t *types.TypeElement) []string {
 		path = fmt.Sprintf("!%s!", path)
 	}
 
-	return append(r.Path(t.Parent), path)
+	return append(r.Path(t.Node(t.Parent)), path)
 }
