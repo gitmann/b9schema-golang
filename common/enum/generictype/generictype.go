@@ -107,8 +107,16 @@ var Struct = &GenericType{
 	pathDefault: "{}",
 	cat:         typecategory.Compound,
 	kinds: []string{
-		reflect.Map.String(),
 		reflect.Struct.String(),
+	},
+}
+
+var Map = &GenericType{
+	slug:        "map",
+	pathDefault: "map{}",
+	cat:         typecategory.Compound,
+	kinds: []string{
+		reflect.Map.String(),
 	},
 }
 
@@ -185,6 +193,7 @@ func init() {
 
 	mapTypes(List)
 	mapTypes(Struct)
+	mapTypes(Map)
 
 	mapTypes(DateTime)
 

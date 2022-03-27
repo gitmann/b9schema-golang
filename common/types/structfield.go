@@ -16,13 +16,13 @@ import (
 type StructFieldTag struct {
 	Ignore  bool
 	Alias   string
-	Options *NativeOption
+	Options NativeOption
 }
 
 // NewStructFieldTag parses the contents of tag string to initialize a StructFieldTag.
 // - Reference for common tags: https://zchee.github.io/golang-wiki/Well-known-struct-tags/
 //
-// Tags alwyas follow the pattern: <alias>,<comma-delimited options>
+// Tags always follow the pattern: <alias>,<comma-delimited options>
 // - if tag string is "-", field is ignored
 // - either <alias> or <options> can be omitted
 // - if <options> is empty, the comma may be omitted
@@ -122,7 +122,7 @@ func ParseTags(tag reflect.StructTag) Tags {
 
 		// Scan to colon. A space, a quote or a control character is a syntax error.
 		// Strictly speaking, control chars include the range [0x7f, 0x9f], not just
-		// [0x00, 0x1f], but in practice, we ignore the multi-byte control characters
+		// [0x00, 0x1f], but in practice, we ignore the multibyte control characters
 		// as it is simpler to inspect the tag's bytes than the tag's runes.
 		i = 0
 		for i < len(tag) && tag[i] > ' ' && tag[i] != ':' && tag[i] != '"' && tag[i] != 0x7f {

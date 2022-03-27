@@ -102,13 +102,6 @@ func (r *Reflector) reflectTypeImpl(ancestorTypeRef types.AncestorTypeRef, curre
 		panic("parent is nil")
 	}
 
-	if currentElem.Node(currentElem.Parent).Type == generictype.Root.String() {
-		if genericType != generictype.Struct && genericType.Category() != typecategory.Reference {
-			currentElem.Error = types.RootKindErr
-			return
-		}
-	}
-
 	// Capture Go-specific attributes common to all types.
 	native.Options.AddBool("IsZero", v.IsZero())
 	native.Options.AddBool("IsValid", v.IsValid())
@@ -138,15 +131,19 @@ func (r *Reflector) reflectTypeImpl(ancestorTypeRef types.AncestorTypeRef, curre
 	switch genericType.Category() {
 	case typecategory.Basic:
 		// Basic types are already handled by the default operations above. Nothing else to do here.
+
 	case typecategory.Known:
 		// Known types are already handled by the default operations above. However, TypeRef should be removed.
 		currentElem.TypeRef = ""
 		native.TypeRef = ""
+
 	case typecategory.Compound:
 		switch genericType {
 		// Compound types are reflected in their own functions. Capture ref list for processing below.
 		case generictype.List:
 			r.reflectTypeListImpl(ancestorTypeRef, currentElem, v, s)
+		case generictype.Map:
+			r.reflectTypeMapImpl(ancestorTypeRef, currentElem, v, s)
 		case generictype.Struct:
 			r.reflectTypeStructImpl(ancestorTypeRef, currentElem, v, s)
 		default:
@@ -171,6 +168,16 @@ func (r *Reflector) reflectTypeImpl(ancestorTypeRef types.AncestorTypeRef, curre
 	if unhandledType {
 		// This should never happen!!! Just break the chain.
 		panic(fmt.Sprintf("unexpected type %q", genericType))
+	}
+
+	// If current node parent is Root, type must be a Struct.
+	// - NOTE: Use currentElem type because it may have changed in recursive processing.
+	if currentElem.Node(currentElem.Parent).Type == generictype.Root.String() {
+		if currentElem.Type != generictype.Struct.String() {
+			currentElem.Error = types.RootKindErr
+			currentElem.RemoveAllChildren()
+			return
+		}
 	}
 
 	// If current element is ancestorTypeRef named type, add to typeRefs.
@@ -360,56 +367,12 @@ func (r *Reflector) reflectTypeListImpl(ancestorTypeRef types.AncestorTypeRef, c
 	}
 }
 
-// reflectTypeStructImpl reflects on struct types: Struct, Map
+// reflectTypeMapImpl reflects on the Map type
 // Struct and Map represent key-value pairs.
 // - Struct keys are field names which are always strings.
 // - Map keys can be any comprable Go type.
-func (r *Reflector) reflectTypeStructImpl(ancestorTypeRef types.AncestorTypeRef, currentElem *types.TypeNode, v reflect.Value, s *reflect.StructField) {
+func (r *Reflector) reflectTypeMapImpl(ancestorTypeRef types.AncestorTypeRef, currentElem *types.TypeNode, v reflect.Value, s *reflect.StructField) {
 	switch v.Kind() {
-	case reflect.Struct:
-		if currentElem.Error == "" {
-			if v.NumField() == 0 {
-				currentElem.Error = types.EmptyStructErr
-				return
-			}
-
-			// Count exported fields.
-			exportedFields := 0
-
-			for i := 0; i < v.NumField(); i++ {
-				structField := v.Type().Field(i)
-				targetValue := v.Field(i)
-
-				// Skip un-exported fields.
-				if structField.PkgPath != "" {
-					continue
-				}
-				exportedFields++
-
-				nextElem := currentElem.NewChild(structField.Name)
-
-				// Parse struct tags.
-				tags := types.ParseTags(structField.Tag)
-				if len(tags) > 0 {
-					for tagName, tagVal := range tags {
-						tempNative := nextElem.Native[tagName]
-						if tempNative == nil {
-							tempNative = types.NewNativeType(tagName)
-							nextElem.Native[tagName] = tempNative
-						}
-						tempNative.UpdateFromTag(tagVal)
-					}
-				}
-
-				r.reflectTypeImpl(ancestorTypeRef.Copy(), nextElem, targetValue, &structField)
-			}
-
-			if exportedFields == 0 {
-				currentElem.Error = types.NoExportedFieldsErr
-				return
-			}
-		}
-
 	case reflect.Map:
 		currentElem.Native[currentElem.NativeDialect].Options.AddBool("IsNil", v.IsNil())
 
@@ -421,11 +384,16 @@ func (r *Reflector) reflectTypeStructImpl(ancestorTypeRef types.AncestorTypeRef,
 				return
 			}
 
-			// Empty map not allowed.
+			// If map is empty, keep Map type and capture value kind as child.
 			if v.Len() == 0 {
-				currentElem.Error = types.EmptyMapErr
+				targetValue := reflect.New(v.Type().Elem()).Elem()
+				nextElem := currentElem.NewChild("")
+				r.reflectTypeImpl(ancestorTypeRef.Copy(), nextElem, targetValue, nil)
 				return
 			}
+
+			// If map has keys, change generic type to Struct.
+			currentElem.Type = generictype.Struct.String()
 
 			// Iterate through map by keys in sorted order.
 			// - Assume that all map keys are exported fields which means they must be capitalized.
@@ -473,6 +441,58 @@ func (r *Reflector) reflectTypeStructImpl(ancestorTypeRef types.AncestorTypeRef,
 				uniqKeys[k.ExportName]++
 
 				r.reflectTypeImpl(ancestorTypeRef.Copy(), nextElem, mapValue, nil)
+			}
+		}
+	}
+}
+
+// reflectTypeStructImpl reflects on struct types: Struct, Map
+// Struct and Map represent key-value pairs.
+// - Struct keys are field names which are always strings.
+// - Map keys can be any comprable Go type.
+func (r *Reflector) reflectTypeStructImpl(ancestorTypeRef types.AncestorTypeRef, currentElem *types.TypeNode, v reflect.Value, s *reflect.StructField) {
+	switch v.Kind() {
+	case reflect.Struct:
+		if currentElem.Error == "" {
+			if v.NumField() == 0 {
+				currentElem.Error = types.EmptyStructErr
+				return
+			}
+
+			// Count exported fields.
+			exportedFields := 0
+
+			for i := 0; i < v.NumField(); i++ {
+				structField := v.Type().Field(i)
+				targetValue := v.Field(i)
+
+				// Skip un-exported fields.
+				if structField.PkgPath != "" {
+					continue
+				}
+				exportedFields++
+
+				nextElem := currentElem.NewChild(structField.Name)
+
+				// Parse struct tags.
+				tags := types.ParseTags(structField.Tag)
+				if len(tags) > 0 {
+					for tagName, tagVal := range tags {
+						tempNative := nextElem.Native[tagName]
+						if tempNative == nil {
+							tempNative = types.NewNativeType(tagName)
+							nextElem.Native[tagName] = tempNative
+						}
+						tempNative.UpdateFromTag(tagVal)
+					}
+				}
+
+				r.reflectTypeImpl(ancestorTypeRef.Copy(), nextElem, targetValue, &structField)
+			}
+
+			if exportedFields == 0 {
+				currentElem.Error = types.NoExportedFieldsErr
+				return
 			}
 		}
 	}

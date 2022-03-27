@@ -403,18 +403,14 @@ func (p *PathList) String() string {
 // NativeOption stores options as key-value pairs but returns a list of strings.
 // - Value-only entries are unique by value.
 // - Values with keys are unique by key.
-type NativeOption struct {
-	OptionMap map[string]string
-}
+type NativeOption map[string]string
 
-func NewNativeOption() *NativeOption {
-	return &NativeOption{
-		OptionMap: make(map[string]string),
-	}
+func NewNativeOption() NativeOption {
+	return map[string]string{}
 }
 
 // Equals returns true if both NativeOption struct have the same values.
-func (n *NativeOption) Equals(other *NativeOption) bool {
+func (n NativeOption) Equals(other NativeOption) bool {
 	if n == nil && other == nil {
 		// Both are nil so equal.
 		return true
@@ -422,11 +418,11 @@ func (n *NativeOption) Equals(other *NativeOption) bool {
 
 	// Treat nil option map as zero-length.
 	var thisLen, otherLen int
-	if n != nil && n.OptionMap != nil {
-		thisLen = len(n.OptionMap)
+	if n != nil {
+		thisLen = len(n)
 	}
-	if other != nil && other.OptionMap != nil {
-		otherLen = len(other.OptionMap)
+	if other != nil {
+		otherLen = len(other)
 	}
 
 	if thisLen != otherLen {
@@ -435,19 +431,19 @@ func (n *NativeOption) Equals(other *NativeOption) bool {
 		return true
 	}
 
-	return reflect.DeepEqual(n.OptionMap, n.OptionMap)
+	return reflect.DeepEqual(n, other)
 }
 
 // AsList returns options as a slice of strings.
-func (n *NativeOption) AsList() []string {
+func (n NativeOption) AsList() []string {
 	// Return empty slice if no options are set.
-	if len(n.OptionMap) == 0 {
+	if len(n) == 0 {
 		return make([]string, 0)
 	}
 
-	s := make([]string, len(n.OptionMap))
+	s := make([]string, len(n))
 	i := 0
-	for k, v := range n.OptionMap {
+	for k, v := range n {
 		if v == "" {
 			//	Value only
 			s[i] = k
@@ -464,26 +460,26 @@ func (n *NativeOption) AsList() []string {
 }
 
 // AddVal adds an option value string.
-func (n *NativeOption) AddVal(val string) {
+func (n NativeOption) AddVal(val string) {
 	// Ignore if value is empty.
 	if val == "" {
 		return
 	}
-	n.OptionMap[val] = ""
+	n[val] = ""
 }
 
 // Delete removes an entry from the option map.
 // - key will match either key-value pairs or value-only settings.
-func (n *NativeOption) Delete(key string) {
+func (n NativeOption) Delete(key string) {
 	// Ignore empty key.
 	if key == "" {
 		return
 	}
-	delete(n.OptionMap, key)
+	delete(n, key)
 }
 
 // AddKeyVal adds an option string key=val
-func (n *NativeOption) AddKeyVal(key, val string) {
+func (n NativeOption) AddKeyVal(key, val string) {
 	// Ignore if key is empty.
 	if key == "" {
 		return
@@ -496,48 +492,48 @@ func (n *NativeOption) AddKeyVal(key, val string) {
 	}
 
 	// Set value.
-	n.OptionMap[key] = val
+	n[key] = val
 }
 
 // AddBool adds a boolean as an option string.
 // - key is required
 //   - if key is empty, nothing is added
 // - val is boolean value
-func (n *NativeOption) AddBool(key string, val bool) {
+func (n NativeOption) AddBool(key string, val bool) {
 	// Ignore if key is missing.
 	if key == "" {
 		return
 	}
 
-	n.OptionMap[key] = fmt.Sprintf("%t", val)
+	n[key] = fmt.Sprintf("%t", val)
 }
 
 // AddThreeFlag adds a ThreeFlag value as a string.
 // - key is required
 //   - if key is empty, nothing is added
 // - val is ThreeFlag value
-func (n *NativeOption) AddThreeFlag(key string, val threeflag.ThreeFlag) {
+func (n NativeOption) AddThreeFlag(key string, val threeflag.ThreeFlag) {
 	// Ignore if key is missing.
 	if key == "" {
 		return
 	}
 
-	n.OptionMap[key] = val.String()
+	n[key] = val.String()
 }
 
 // UpdateFrom updates with values from another NativeOption.
-func (n *NativeOption) UpdateFrom(other *NativeOption) {
-	for k, v := range other.OptionMap {
-		n.OptionMap[k] = v
+func (n NativeOption) UpdateFrom(other NativeOption) {
+	for k, v := range other {
+		n[k] = v
 	}
 }
 
 // Copy makes a copy of the NativeOption.
-func (n *NativeOption) Copy() *NativeOption {
+func (n NativeOption) Copy() NativeOption {
 	c := NewNativeOption()
 
-	for k, v := range n.OptionMap {
-		c.OptionMap[k] = v
+	for k, v := range n {
+		c[k] = v
 	}
 
 	return c
@@ -569,7 +565,7 @@ type NativeType struct {
 	// - Format is one of:
 	//   - "value"
 	//   - "key=value"
-	Options *NativeOption
+	Options NativeOption
 
 	// Capture error if element cannot reflect.
 	Error string

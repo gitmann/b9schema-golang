@@ -133,6 +133,14 @@ func (r *OpenAPIRenderer) Pre(t *types.TypeNode) []string {
 		case generictype.Struct.String():
 			outLines = append(outLines,
 				r.Prefix()+"type: object",
+				r.Prefix()+"additionalProperties: false",
+				r.Prefix()+"properties:",
+			)
+			r.SetIndent(r.Indent() + 1)
+		case generictype.Map.String():
+			outLines = append(outLines,
+				r.Prefix()+"type: object",
+				r.Prefix()+"additionalProperties: true",
 				r.Prefix()+"properties:",
 			)
 			r.SetIndent(r.Indent() + 1)
