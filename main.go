@@ -1,9 +1,10 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/gitmann/b9schema-golang/reflector"
+	"github.com/gitmann/b9schema-golang/renderer/openapi"
+	"strings"
 )
 
 // Hello, World for b9schema.
@@ -29,10 +30,14 @@ func main() {
 
 	schema := r.Schema
 
-	// Print schema as JSON.
-	if b, err := json.MarshalIndent(schema, "", "  "); err != nil {
-		fmt.Printf("error marshalling schema: %s\n", err)
-	} else {
-		fmt.Println(string(b))
-	}
+	//// Print schema as JSON.
+	//if b, err := json.MarshalIndent(schema, "", "  "); err != nil {
+	//	fmt.Printf("error marshalling schema: %s\n", err)
+	//} else {
+	//	fmt.Println(string(b))
+	//}
+
+	swagger := openapi.NewOpenAPIRenderer("unknown", nil)
+	outLines, _ := swagger.ProcessSchema(schema)
+	fmt.Println(strings.Join(outLines, "\n"))
 }

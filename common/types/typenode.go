@@ -138,13 +138,27 @@ func (t *TypeNode) AddChild(childElem *TypeNode) {
 	t.Children = append(t.Children, childElem.ID)
 }
 
+// MapKey returns a key for a TypeNode as the first, non-empty value of:
+// - Name
+// - MetaKey
+// - ID
+func (t *TypeNode) MapKey() string {
+	if t.Name != "" {
+		return t.Name
+	}
+	if t.MetaKey != "" {
+		return t.MetaKey
+	}
+	return t.ID
+}
+
 // ChildMap returns a map of Children name --> *TypeNode
 // - Output map can be passed to ChildKeys, ContainsChild, ChildByName for reuse.
 func (t *TypeNode) ChildMap() map[string]*TypeNode {
 	out := map[string]*TypeNode{}
 	for _, childID := range t.Children {
 		childNode := t.pool.Nodes[childID]
-		out[childNode.Name] = childNode
+		out[childNode.MapKey()] = childNode
 	}
 	return out
 }
