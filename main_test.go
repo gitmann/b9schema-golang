@@ -310,7 +310,11 @@ var typeTests = []fixtures.TestCase{
 			`Root.{}.Bool:boolean`,
 		},
 		OpenAPIStrings: []string{
+			`info:`,
+			`  title: boolean`,
+			`  version: v1.0.0`,
 			`openapi: 3.0.0`,
+			``,
 			`components:`,
 			`  schemas:`,
 			`    BoolTypes:`,
@@ -365,7 +369,11 @@ var typeTests = []fixtures.TestCase{
 			`Root.{}.Uintptr:integer`,
 		},
 		OpenAPIStrings: []string{
+			`info:`,
+			`  title: integer`,
+			`  version: v1.0.0`,
 			`openapi: 3.0.0`,
+			``,
 			`components:`,
 			`  schemas:`,
 			`    IntegerTypes:`,
@@ -424,7 +432,11 @@ var typeTests = []fixtures.TestCase{
 			`Root.{}.Float64:float`,
 		},
 		OpenAPIStrings: []string{
+			`info:`,
+			`  title: float`,
+			`  version: v1.0.0`,
 			`openapi: 3.0.0`,
+			``,
 			`components:`,
 			`  schemas:`,
 			`    FloatTypes:`,
@@ -462,7 +474,11 @@ var typeTests = []fixtures.TestCase{
 			`Root.{}.String:string`,
 		},
 		OpenAPIStrings: []string{
+			`info:`,
+			`  title: string`,
+			`  version: v1.0.0`,
 			`openapi: 3.0.0`,
+			``,
 			`components:`,
 			`  schemas:`,
 			`    StringTypes:`,
@@ -505,7 +521,11 @@ var typeTests = []fixtures.TestCase{
 			`Root.{}."!UnsafePointer:invalid:unsafe.Pointer!" ERROR:kind not supported`,
 		},
 		OpenAPIStrings: []string{
+			`info:`,
+			`  title: invalid`,
+			`  version: v1.0.0`,
 			`openapi: 3.0.0`,
+			``,
 			`components:`,
 			`  schemas:`,
 			`    InvalidTypes:`,
@@ -577,7 +597,11 @@ var typeTests = []fixtures.TestCase{
 			`Root.{}.!Struct:{}! ERROR:empty struct not supported`,
 		},
 		OpenAPIStrings: []string{
+			`info:`,
+			`  title: compound`,
+			`  version: v1.0.0`,
 			`openapi: 3.0.0`,
+			``,
 			`components:`,
 			`  schemas:`,
 			`    CompoundTypes:`,
@@ -651,7 +675,11 @@ var typeTests = []fixtures.TestCase{
 			`Root.{}.DateTime:datetime`,
 		},
 		OpenAPIStrings: []string{
+			`info:`,
+			`  title: special`,
+			`  version: v1.0.0`,
 			`openapi: 3.0.0`,
+			``,
 			`components:`,
 			`  schemas:`,
 			`    SpecialTypes:`,
@@ -725,7 +753,11 @@ var listTests = []fixtures.TestCase{
 			`Root.{}.Array3:[].string`,
 		},
 		OpenAPIStrings: []string{
+			`info:`,
+			`  title: arrays`,
+			`  version: v1.0.0`,
 			`openapi: 3.0.0`,
+			``,
 			`components:`,
 			`  schemas:`,
 			`    ArrayStruct:`,
@@ -783,7 +815,11 @@ var listTests = []fixtures.TestCase{
 			`Root.{}.Array3:[].string`,
 		},
 		OpenAPIStrings: []string{
+			`info:`,
+			`  title: json-array`,
+			`  version: v1.0.0`,
 			`openapi: 3.0.0`,
+			``,
 			`paths:`,
 			`  json-array:`,
 			`    get:`,
@@ -836,7 +872,11 @@ var listTests = []fixtures.TestCase{
 			`Root.{}.Slice:[].string`,
 		},
 		OpenAPIStrings: []string{
+			`info:`,
+			`  title: slices`,
+			`  version: v1.0.0`,
 			`openapi: 3.0.0`,
+			``,
 			`components:`,
 			`  schemas:`,
 			`    SliceStruct:`,
@@ -940,7 +980,11 @@ var compoundTests = []fixtures.TestCase{
 			`Root.{}.MapOK:{}.StringVal:string`,
 		},
 		OpenAPIStrings: []string{
+			`info:`,
+			`  title: golang-map`,
+			`  version: v1.0.0`,
 			`openapi: 3.0.0`,
+			``,
 			`components:`,
 			`  schemas:`,
 			`    MapTestsStruct:`,
@@ -1027,7 +1071,11 @@ var compoundTests = []fixtures.TestCase{
 			`Root.{}.MapOK:{}.StringVal:string`,
 		},
 		OpenAPIStrings: []string{
+			`info:`,
+			`  title: json-map`,
+			`  version: v1.0.0`,
 			`openapi: 3.0.0`,
+			``,
 			`paths:`,
 			`  json-map:`,
 			`    get:`,
@@ -1150,7 +1198,11 @@ var referenceTests = []fixtures.TestCase{
 			`Root.{}.PtrVal:{}.StringVal:string`,
 		},
 		OpenAPIStrings: []string{
+			`info:`,
+			`  title: reference-tests-init`,
+			`  version: v1.0.0`,
 			`openapi: 3.0.0`,
+			``,
 			`components:`,
 			`  schemas:`,
 			`    BasicStruct:`,
@@ -1285,7 +1337,11 @@ var cycleTests = []fixtures.TestCase{
 			`$.{}:CycleTest`,
 		},
 		OpenAPIStrings: []string{
+			`info:`,
+			`  title: cycle-test`,
+			`  version: v1.0.0`,
 			`openapi: 3.0.0`,
+			``,
 			`components:`,
 			`  schemas:`,
 			`    cycleA:`,
@@ -1375,7 +1431,11 @@ var jsonTagTests = []fixtures.TestCase{
 			`$.{}:JSONTagTests`,
 		},
 		OpenAPIStrings: []string{
+			`info:`,
+			`  title: json-tags`,
+			`  version: v1.0.0`,
 			`openapi: 3.0.0`,
+			``,
 			`components:`,
 			`  schemas:`,
 			`    JSONTagTests:`,
@@ -1724,7 +1784,7 @@ func runTests(t *testing.T, testCases []fixtures.TestCase) {
 			opt.DeReference = false
 			opt.Indent = 0
 
-			r := openapi.NewOpenAPIRenderer("/test/path", opt)
+			r := openapi.NewOpenAPIRenderer(openapi.NewMetaData(test.Name, "v1.0.0"), opt)
 			gotStrings, _ := r.ProcessSchema(gotResult)
 			wantStrings := test.OpenAPIStrings
 

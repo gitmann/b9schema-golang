@@ -41,7 +41,10 @@ func main() {
 	opt := renderer.NewOptions()
 	opt.DeReference = true
 
-	swagger := openapi.NewOpenAPIRenderer("unknown", opt)
-	outLines, _ := swagger.ProcessSchema(schema)
+	swagger := openapi.NewOpenAPIRenderer(openapi.NewMetaData("", ""), opt)
+	outLines, err := swagger.ProcessSchema(schema)
+	if err != nil {
+		fmt.Println(err)
+	}
 	fmt.Println(strings.Join(outLines, "\n"))
 }

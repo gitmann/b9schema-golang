@@ -1,7 +1,9 @@
 package openapi
 
 import (
+	"errors"
 	"fmt"
+	"github.com/ghodss/yaml"
 	"github.com/gitmann/b9schema-golang/common/enum/generictype"
 	"github.com/gitmann/b9schema-golang/common/enum/threeflag"
 	"github.com/gitmann/b9schema-golang/common/types"
@@ -15,13 +17,11 @@ const SCHEMA_PATH = "components/schemas"
 
 // OpenAPIRenderer provides a simple string renderer.
 type OpenAPIRenderer struct {
-	// Path
-	URLPath string
-
-	Options *renderer.Options
+	MetaData *MetaData
+	Options  *renderer.Options
 }
 
-func NewOpenAPIRenderer(urlPath string, opt *renderer.Options) *OpenAPIRenderer {
+func NewOpenAPIRenderer(metadata *MetaData, opt *renderer.Options) *OpenAPIRenderer {
 	if opt == nil {
 		opt = renderer.NewOptions()
 	}
@@ -29,16 +29,26 @@ func NewOpenAPIRenderer(urlPath string, opt *renderer.Options) *OpenAPIRenderer 
 	opt.Prefix = "  "
 
 	return &OpenAPIRenderer{
-		URLPath: urlPath,
-		Options: opt,
+		MetaData: metadata,
+		Options:  opt,
 	}
 }
 
 func (r *OpenAPIRenderer) ProcessSchema(schema *types.Schema, settings ...string) ([]string, error) {
 	out := []string{}
 
+	if r.MetaData == nil {
+		return out, errors.New("missing metadata")
+	} else if err := r.MetaData.Validate(); err != nil {
+		return out, err
+	}
+
 	// Header
-	out = append(out, `openapi: 3.0.0`)
+	if b, err := yaml.Marshal(r.MetaData); err != nil {
+		return out, err
+	} else {
+		out = append(out, string(b))
+	}
 
 	out = util.AppendStrings(out, renderer.RenderSchema(schema, r), "")
 
@@ -99,7 +109,7 @@ func (r *OpenAPIRenderer) Pre(t *types.TypeNode) []string {
 
 	// Start PathItem block if current element parent is Root.
 	if t.Node(t.Parent).Name == "Root" {
-		urlPath := r.Prefix() + r.URLPath
+		urlPath := "/unknown/path"
 		if t.MetaKey != "" {
 			urlPath = t.MetaKey
 		}

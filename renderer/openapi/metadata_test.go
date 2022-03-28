@@ -16,8 +16,11 @@ func TestNewMetaData(t *testing.T) {
 	}{
 		{
 			name: "default",
-			meta: NewMetaData(),
+			meta: NewMetaData("", ""),
 			wantYAML: []string{
+				`info:`,
+				`  title: default title`,
+				`  version: default version`,
 				`openapi: 3.0.0`,
 			},
 		},
@@ -60,7 +63,7 @@ func TestNewMetaData(t *testing.T) {
 				`  description: This is the test doc site.`,
 				`  url: https://test.doc.site.com/path/to/docs`,
 				`info:`,
-				`  Contact:`,
+				`  contact:`,
 				`    email: support@site.com`,
 				`    name: Support Team`,
 				`    url: https://support.site.com/`,

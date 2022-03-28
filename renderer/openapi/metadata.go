@@ -1,22 +1,70 @@
 package openapi
 
+import (
+	"errors"
+	"fmt"
+	"strings"
+)
+
 // This file defines structs for metadata in the OpenAPI spec:
 // https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.0.3.md
 
 const OPENAPI_VERSION = "3.0.0"
 
 type MetaData struct {
-	OpenAPI      string                       `json:"openapi"`
-	Info         *InfoObject                  `json:"info,omitempty"`
-	Servers      []*ServerObject              `json:"servers,omitempty"`
+	// REQUIRED. This string MUST be the semantic version number of the OpenAPI Specification version that
+	// the OpenAPI document uses. The openapi field SHOULD be used by tooling specifications and clients
+	// to interpret the OpenAPI document. This is not related to the API info.version string.
+	OpenAPI string `json:"openapi"`
+
+	// REQUIRED. Provides metadata about the API. The metadata MAY be used by tooling as required.
+	Info *InfoObject `json:"info,omitempty"`
+
+	// An array of Server Objects, which provide connectivity information to a target server. If the servers
+	// property is not provided, or is an empty array, the default value would be a Server Object with a url value of /.
+	Servers []*ServerObject `json:"servers,omitempty"`
+
+	// Additional external documentation.
 	ExternalDocs *ExternalDocumentationObject `json:"externalDocs,omitempty"`
 }
 
 // NewMetaData returns an empty metadata struct with the default version.
-func NewMetaData() *MetaData {
+func NewMetaData(title, version string) *MetaData {
+	if title == "" {
+		title = "default title"
+	}
+	if version == "" {
+		version = "default version"
+	}
+
 	return &MetaData{
 		OpenAPI: OPENAPI_VERSION,
+		Info: &InfoObject{
+			Title:   title,
+			Version: version,
+		},
 	}
+}
+
+// Validate checks that metadata contains required fields.
+func (m *MetaData) Validate() error {
+	if !strings.HasPrefix(m.OpenAPI, "3.0") {
+		return fmt.Errorf("invalid 'openapi' value %q", m.OpenAPI)
+	}
+
+	if m.Info == nil {
+		return errors.New("missing 'info' object")
+	}
+
+	if m.Info.Title == "" {
+		return errors.New("'info.title' is required")
+	}
+
+	if m.Info.Version == "" {
+		return errors.New("'info.version' is required")
+	}
+
+	return nil
 }
 
 type InfoObject struct {
@@ -31,7 +79,7 @@ type InfoObject struct {
 	TermsOfService string `json:"termsOfService,omitempty"`
 
 	// The contact information for the exposed API.
-	Contact *ContactObject `yaml"contact,omitempty"`
+	Contact *ContactObject `json:"contact,omitempty"`
 
 	// The license information for the exposed API.
 	License *LicenseObject `json:"license,omitempty"`
@@ -56,6 +104,7 @@ type LicenseObject struct {
 type ServerObject struct {
 	// REQUIRED. A URL to the target host. This URL supports Server Variables and MAY be relative, to indicate that the host location is relative to the location where the OpenAPI document is being served. Variable substitutions will be made when a variable is named in {brackets}.
 	URL string `json:"url"`
+
 	// An optional string describing the host designated by the URL. CommonMark syntax MAY be used for rich text representation.
 	Description string `json:"description,omitempty"`
 
