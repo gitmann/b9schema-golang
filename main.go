@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/gitmann/b9schema-golang/reflector"
+	"github.com/gitmann/b9schema-golang/renderer"
 	"github.com/gitmann/b9schema-golang/renderer/openapi"
 	"strings"
 )
@@ -37,7 +38,10 @@ func main() {
 	//	fmt.Println(string(b))
 	//}
 
-	swagger := openapi.NewOpenAPIRenderer("unknown", nil)
+	opt := renderer.NewOptions()
+	opt.DeReference = true
+
+	swagger := openapi.NewOpenAPIRenderer("unknown", opt)
 	outLines, _ := swagger.ProcessSchema(schema)
 	fmt.Println(strings.Join(outLines, "\n"))
 }

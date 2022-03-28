@@ -133,9 +133,12 @@ func (r *OpenAPIRenderer) Pre(t *types.TypeNode) []string {
 		r.SetIndent(r.Indent() + 1)
 	}
 
-	if jsonType.TypeRef != "" {
+	if !r.Options.DeReference && jsonType.TypeRef != "" {
 		out = append(out, fmt.Sprintf(`%s$ref: '#/%s/%s'`, r.Prefix(), SCHEMA_PATH, jsonType.TypeRef))
 	} else {
+		if r.Options.DeReference && jsonType.TypeRef != "" {
+			out = append(out, fmt.Sprintf(`%sdescription: 'From $ref: #/%s/%s'`, r.Prefix(), SCHEMA_PATH, jsonType.TypeRef))
+		}
 		switch t.Type {
 		case generictype.Struct.String():
 			out = append(out,
