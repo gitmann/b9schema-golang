@@ -17,8 +17,8 @@ func NewSchema(nativeDialect string) *Schema {
 	pool := NewNodePool()
 
 	schema := &Schema{
-		RootID:    pool.NewRootNode("RootID", nativeDialect).ID,
-		TypeRefID: pool.NewRootNode("TypeRefID", nativeDialect).ID,
+		RootID:    pool.NewRootNode("Root", nativeDialect).ID,
+		TypeRefID: pool.NewRootNode("TypeRef", nativeDialect).ID,
 
 		NodePool: pool,
 	}

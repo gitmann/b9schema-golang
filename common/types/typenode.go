@@ -91,10 +91,14 @@ type TypeNode struct {
 	NativeDialect string `json:",omitempty"`
 
 	// Native type features by dialect name.
-	Native map[string]*NativeType `json:"-"`
+	Native map[string]*NativeType
 
 	// Capture error if element cannot reflect.
 	Error string `json:",omitempty"`
+
+	// MetaKey is a tag attached to a top-level node during schema derivation.
+	// This can be used to attach additional metadata during rendering.
+	MetaKey string `json:",omitempty"`
 
 	// Pointers to Parent and Child ID strings.
 	Parent   string   `json:",omitempty"`
@@ -224,6 +228,7 @@ func (t *TypeNode) Copy() *TypeNode {
 	n.TypeCategory = t.TypeCategory
 	n.TypeRef = t.TypeRef
 	n.Error = t.Error
+	n.MetaKey = t.MetaKey
 
 	// Copy Children with new element as parent.
 	for _, childID := range t.Children {
@@ -546,13 +551,13 @@ type NativeType struct {
 	Dialect string
 
 	// Name of element if different from generic Name.
-	Name string
+	Name string `json:",omitempty"`
 
 	// Native type of element if different from the generic Type.
-	Type string
+	Type string `json:",omitempty"`
 
 	// TypeRef holds the native name of a type if different from the generic TypeRef.
-	TypeRef string
+	TypeRef string `json:",omitempty"`
 
 	// Include indicates whether an element should be included in output for a dialect.
 	// Include has three value values:
@@ -568,7 +573,7 @@ type NativeType struct {
 	Options NativeOption
 
 	// Capture error if element cannot reflect.
-	Error string
+	Error string `json:",omitempty"`
 }
 
 // NewNativeType initializes a new NativeType with default settings.

@@ -91,10 +91,10 @@ func (r *JSONRenderer) Path(t *types.TypeNode) []string {
 	// Check root.
 	if t.Type == generictype.Root.String() {
 		switch t.Name {
-		case "RootID":
+		case "Root":
 			// JSON Path root is "$"
 			return []string{"$"}
-		case "TypeRefID":
+		case "TypeRef":
 			return []string{"definitions"}
 		default:
 			return []string{t.Name}

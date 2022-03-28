@@ -9,15 +9,25 @@ import (
 // Hello, World for b9schema.
 type HelloStruct struct {
 	Hello string
-	World float64
+}
+
+type GoodbyeStruct struct {
+	Bye float64
+}
+
+type MorningStruct struct {
+	Morning HelloStruct
 }
 
 func main() {
-	var h *HelloStruct
-
 	// Derive schema.
 	r := reflector.NewReflector()
-	schema := r.DeriveSchema(h)
+
+	r.DeriveSchema(HelloStruct{}, "/path/to/hello")
+	r.DeriveSchema(GoodbyeStruct{}, "/path/to/goodbye")
+	r.DeriveSchema(MorningStruct{}, "/path/to/morning")
+
+	schema := r.Schema
 
 	// Print schema as JSON.
 	if b, err := json.MarshalIndent(schema, "", "  "); err != nil {

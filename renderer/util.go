@@ -44,7 +44,7 @@ func RenderType(t *types.TypeNode, r Renderer) []string {
 	out := []string{}
 
 	// Process element with preFunc.
-	out = util.AppendStrings(out, r.Pre(t))
+	out = util.AppendStrings(out, r.Pre(t), "")
 
 	// Process children.
 	if !r.DeReference() && t.TypeRef != "" {
@@ -60,7 +60,7 @@ func RenderType(t *types.TypeNode, r Renderer) []string {
 		for _, childName := range typeRefKeys {
 			// Reset indent before each child.
 			r.SetIndent(childIndent)
-			out = util.AppendStrings(out, RenderType(typeRefMap[childName], r))
+			out = util.AppendStrings(out, RenderType(typeRefMap[childName], r), "")
 		}
 	}
 
@@ -68,7 +68,7 @@ func RenderType(t *types.TypeNode, r Renderer) []string {
 	r.SetIndent(originalIndent)
 
 	// Process element with postFunc.
-	out = util.AppendStrings(out, r.Post(t))
+	out = util.AppendStrings(out, r.Post(t), "")
 
 	// Restore original indent.
 	r.SetIndent(originalIndent)

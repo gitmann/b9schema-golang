@@ -42,13 +42,16 @@ func (r *Reflector) Reset() *Reflector {
 }
 
 // DeriveSchema builds a reflector list of elements from the given interface.
-func (r *Reflector) DeriveSchema(x interface{}) *types.Schema {
+func (r *Reflector) DeriveSchema(x interface{}, metaKey string) *types.Schema {
 	if r.Schema == nil {
 		r.Reset()
 	}
 
 	// Start recursive reflection.
-	r.reflectTypeImpl(types.NewAncestorTypeRef(), r.Schema.RootNode().NewChild(""), reflect.ValueOf(x), nil)
+	childNode := r.Schema.RootNode().NewChild("")
+	childNode.MetaKey = metaKey
+
+	r.reflectTypeImpl(types.NewAncestorTypeRef(), childNode, reflect.ValueOf(x), nil)
 
 	return r.Schema
 }
@@ -214,7 +217,7 @@ func (r *Reflector) addTypeRef(currentElem *types.TypeNode) {
 	r.Schema.TypeRefNode().AddChild(refElem)
 }
 
-// typeRefRecursion is an internal recursive function to handle nested TypeRefID.
+// typeRefRecursion is an internal recursive function to handle nested TypeRef.
 // - Recursively process elements.
 // - If TypeRef is found, process TypeRef then remove its children.
 func (r *Reflector) typeRefRecursion(currentElem *types.TypeNode) {

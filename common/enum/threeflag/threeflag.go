@@ -1,17 +1,16 @@
 package threeflag
 
+import "fmt"
+
 // ThreeFlag implements a 3-value flag: "undefined", "true", "false"
-// Uses slugs from: https://threedots.tech/post/safer-enums-in-go/
-type ThreeFlag struct {
-	slug string
-}
+type ThreeFlag int
 
-func (i ThreeFlag) String() string {
-	return i.slug
-}
-
-var (
-	Undefined = ThreeFlag{"undefined"}
-	False     = ThreeFlag{"false"}
-	True      = ThreeFlag{"true"}
+const (
+	Undefined ThreeFlag = 0
+	False     ThreeFlag = -1
+	True      ThreeFlag = 1
 )
+
+func (tf ThreeFlag) String() string {
+	return fmt.Sprintf("%d", tf)
+}
