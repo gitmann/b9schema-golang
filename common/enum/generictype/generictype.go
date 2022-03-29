@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/gitmann/b9schema-golang/common/enum/typecategory"
 	"reflect"
+	"time"
 )
 
 // GenericType defines generic types for shiny schemas.
@@ -31,6 +32,16 @@ func (t *GenericType) PathDefault() string {
 		return t.pathDefault
 	}
 	return t.slug
+}
+
+// ContainsKind returns true if the generic type contains the kind string.
+func (t *GenericType) ContainsKind(kind string) bool {
+	for _, k := range t.kinds {
+		if kind == k {
+			return true
+		}
+	}
+	return false
 }
 
 // Invalid types are not allowed in shiny schemas.
@@ -211,9 +222,16 @@ func GenericTypeOf(v reflect.Value) *GenericType {
 
 		// Look for special types.
 		if v.Type().PkgPath() != "" {
-			fullPath := fmt.Sprintf("%s.%s", v.Type().PkgPath(), v.Type().Name())
+			fullPath := FullPathOf(v)
 			if specialType := genericTypeLookup[fullPath]; specialType != nil {
 				return specialType
+			}
+		}
+
+		// Check for type definitions for special types.
+		if t == Struct {
+			if _, ok := tryConversion(v, reflect.TypeOf(time.Time{})); ok {
+				return DateTime
 			}
 		}
 
@@ -222,6 +240,24 @@ func GenericTypeOf(v reflect.Value) *GenericType {
 	}
 
 	return Invalid
+}
+
+// FullPathOf returns the full package path for a Value.
+func FullPathOf(v reflect.Value) string {
+	return fmt.Sprintf("%s.%s", v.Type().PkgPath(), v.Type().Name())
+}
+
+// tryConversion attempts to convert a Value to the given Type.
+// - 2nd return value is true if conversion succeeds, false otherwise.
+func tryConversion(v reflect.Value, t reflect.Type) (newValue reflect.Value, ok bool) {
+	defer func() {
+		if r := recover(); r != nil {
+			// recover from panic
+			ok = false
+		}
+	}()
+
+	return v.Convert(t), true
 }
 
 // pathDefaultLookup provides fast mapping from genericType.String to pathDefault

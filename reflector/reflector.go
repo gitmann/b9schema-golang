@@ -137,9 +137,12 @@ func (r *Reflector) reflectTypeImpl(ancestorTypeRef types.AncestorTypeRef, curre
 		// Basic types are already handled by the default operations above. Nothing else to do here.
 
 	case typecategory.Known:
-		// Known types are already handled by the default operations above. However, TypeRef should be removed.
-		currentElem.TypeRef = ""
-		native.TypeRef = ""
+		// If the known type package path matches the known ones, then remove the type ref.
+		fullPath := generictype.FullPathOf(v)
+		if genericType.ContainsKind(fullPath) {
+			currentElem.TypeRef = ""
+			native.TypeRef = ""
+		}
 
 	case typecategory.Compound:
 		switch genericType {

@@ -76,8 +76,12 @@ func (r *OpenAPIRenderer) Prefix() string {
 	return strings.Repeat(r.Options.Prefix, r.Options.Indent)
 }
 
+func (r *OpenAPIRenderer) NativeType(t *types.TypeNode) *types.NativeType {
+	return t.GetNativeType("json")
+}
+
 func (r *OpenAPIRenderer) Pre(t *types.TypeNode) []string {
-	jsonType := t.GetNativeType("json")
+	jsonType := r.NativeType(t)
 	if jsonType.Include == threeflag.False {
 		// Skip this element.
 		return []string{}
@@ -141,6 +145,10 @@ func (r *OpenAPIRenderer) Pre(t *types.TypeNode) []string {
 		out = append(out, r.Prefix()+`schema:`)
 
 		r.SetIndent(r.Indent() + 1)
+	} else if t.Parent.Type == generictype.Map.String() {
+		// Map child only exists when map has no known keys. In order to build a valid OpenAPI
+		// schema, make a fake property with the name "unknownKey".
+		jsonType.Name = "valueType"
 	}
 
 	if jsonType.Name != "" {
@@ -158,6 +166,12 @@ func (r *OpenAPIRenderer) Pre(t *types.TypeNode) []string {
 		}
 		if t.Error != "" {
 			descriptionTokens = append(descriptionTokens, fmt.Sprintf("ERROR=%s", t.Error))
+			if strings.HasPrefix(t.Type, generictype.Invalid.String()) {
+				if t.Type != generictype.Invalid.String() {
+					// Add specific type error to description.
+					descriptionTokens = append(descriptionTokens, fmt.Sprintf("Kind=%s", t.Type))
+				}
+			}
 		}
 		if len(descriptionTokens) > 0 {
 			out = append(out, fmt.Sprintf("%sdescription: '%s'", r.Prefix(), strings.Join(descriptionTokens, ";")))
@@ -176,8 +190,15 @@ func (r *OpenAPIRenderer) Pre(t *types.TypeNode) []string {
 		case generictype.Map.String():
 			out = append(out,
 				r.Prefix()+"type: object",
-				r.Prefix()+"additionalProperties: true",
 			)
+			if len(t.Children) > 0 {
+				out = append(out,
+					r.Prefix()+"additionalProperties: true",
+					r.Prefix()+"properties:",
+				)
+			} else {
+				out = append(out, r.Prefix()+"additionalProperties: false")
+			}
 			r.SetIndent(r.Indent() + 1)
 		case generictype.List.String():
 			out = append(out,
@@ -217,9 +238,13 @@ func (r *OpenAPIRenderer) Pre(t *types.TypeNode) []string {
 				r.Prefix()+"format: date-time",
 			)
 		default:
-			out = append(out,
-				r.Prefix()+"type: "+t.Type,
-			)
+			if strings.HasPrefix(t.Type, generictype.Invalid.String()) {
+				// Use "string" type for invalid elements so that OpenAPI schema is valid.
+				out = append(out, r.Prefix()+"type: string")
+			} else {
+				// What else could this be? Let OpenAPI figure it out.
+				out = append(out, r.Prefix()+"type: "+t.Type)
+			}
 		}
 	}
 

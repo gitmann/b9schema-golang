@@ -1,6 +1,7 @@
 package renderer
 
 import (
+	"github.com/gitmann/b9schema-golang/common/enum/threeflag"
 	"github.com/gitmann/b9schema-golang/common/types"
 	"github.com/gitmann/b9schema-golang/common/util"
 )
@@ -58,9 +59,15 @@ func RenderType(t *types.TypeNode, r Renderer) []string {
 		childIndent := r.Indent()
 
 		for _, childName := range typeRefKeys {
+			childNode := typeRefMap[childName]
+			childNative := r.NativeType(childNode)
+			if childNative.Include == threeflag.False {
+				continue
+			}
+
 			// Reset indent before each child.
 			r.SetIndent(childIndent)
-			out = util.AppendStrings(out, RenderType(typeRefMap[childName], r), "")
+			out = util.AppendStrings(out, RenderType(childNode, r), "")
 		}
 	}
 

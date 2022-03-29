@@ -47,6 +47,10 @@ func (r *SimpleRenderer) Prefix() string {
 	return strings.Repeat(r.opt.Prefix, r.opt.Indent)
 }
 
+func (r *SimpleRenderer) NativeType(t *types.TypeNode) *types.NativeType {
+	return t.GetNativeType("")
+}
+
 func (r *SimpleRenderer) Pre(t *types.TypeNode) []string {
 	if t.Type == generictype.Root.String() {
 		return []string{}

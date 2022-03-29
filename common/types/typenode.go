@@ -250,20 +250,22 @@ func (t *TypeNode) GetNativeType(dialect string) *NativeType {
 	newType.Include = threeflag.Undefined
 
 	// Check if a native type exists for the dialect.
-	oldType := t.Native[dialect]
-	if oldType != nil {
-		// Replace with values from oldType if set.
-		if newType.Name != "" && oldType.Name != "" {
-			newType.Name = oldType.Name
-		}
-		if newType.Type != "" && oldType.Type != "" {
-			newType.Type = oldType.Type
-		}
-		if newType.TypeRef != "" && oldType.TypeRef != "" {
-			newType.TypeRef = oldType.TypeRef
-		}
-		if oldType.Include != threeflag.Undefined {
-			newType.Include = oldType.Include
+	if dialect != "" {
+		oldType := t.Native[dialect]
+		if oldType != nil {
+			// Replace with values from oldType if set.
+			if newType.Name != "" && oldType.Name != "" {
+				newType.Name = oldType.Name
+			}
+			if newType.Type != "" && oldType.Type != "" {
+				newType.Type = oldType.Type
+			}
+			if newType.TypeRef != "" && oldType.TypeRef != "" {
+				newType.TypeRef = oldType.TypeRef
+			}
+			if oldType.Include != threeflag.Undefined {
+				newType.Include = oldType.Include
+			}
 		}
 	}
 

@@ -21,6 +21,9 @@ type Renderer interface {
 	// Prefix returns a prefix string with the current indent.
 	Prefix() string
 
+	// NativeType returns the native type for the renderer.
+	NativeType(t *types.TypeNode) *types.NativeType
+
 	// Pre and Post return strings before/after a type element's children are processed.
 	Pre(t *types.TypeNode) []string
 	Post(t *types.TypeNode) []string
