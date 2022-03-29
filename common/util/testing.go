@@ -21,8 +21,6 @@ func CompareStrings(t *testing.T, testName string, gotStrings, wantStrings []str
 	}
 
 	if !reflect.DeepEqual(gotLines, wantLines) {
-		t.Errorf("TEST_FAIL %s", testName)
-
 		maxLen := len(gotLines)
 		if len(wantLines) > maxLen {
 			maxLen = len(wantLines)
@@ -76,4 +74,20 @@ func CompareStrings(t *testing.T, testName string, gotStrings, wantStrings []str
 		t.Logf("TEST_OK %s", testName)
 		return true
 	}
+}
+
+func OutputErrStrings(t *testing.T, testName string, gotStrings []string, err error) {
+	gotLines := []string{}
+	for _, s := range gotStrings {
+		gotLines = append(gotLines, strings.Split(s, "\n")...)
+	}
+
+	outLines := []string{}
+
+	outLines = append(outLines, "***** GOT:")
+	for i, got := range gotLines {
+		outLines = append(outLines, fmt.Sprintf("%05d |%s", i, got))
+	}
+
+	t.Errorf("TEST_FAIL %s: %s\n%s", testName, err, strings.Join(outLines, "\n"))
 }

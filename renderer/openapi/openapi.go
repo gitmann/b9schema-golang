@@ -85,13 +85,13 @@ func (r *OpenAPIRenderer) Pre(t *types.TypeNode) []string {
 
 	// Special handling for root elements.
 	if t.Type == generictype.Root.String() {
-		if t.Name == "Root" {
+		if t.Name == types.ROOT_NAME {
 			// Build an API path.
 			out := []string{r.Prefix() + `paths:`}
 			r.SetIndent(r.Indent() + 1)
 			return out
-		} else if t.Name == "TypeRef" {
-			// Store TypeRefID under the SCHEMA_PATH key.
+		} else if t.Name == types.TYPEREF_NAME {
+			// Store TypeRef under the SCHEMA_PATH key.
 			tokens := strings.Split(SCHEMA_PATH, "/")
 
 			out := []string{}
@@ -108,10 +108,15 @@ func (r *OpenAPIRenderer) Pre(t *types.TypeNode) []string {
 	out := []string{}
 
 	// Start PathItem block if current element parent is Root.
-	if t.Node(t.Parent).Name == "Root" {
+	if t.Parent.Name == types.ROOT_NAME {
 		urlPath := "/unknown/path"
 		if t.MetaKey != "" {
 			urlPath = t.MetaKey
+		}
+
+		// Path must start with "/"
+		if !strings.HasPrefix(urlPath, "/") {
+			urlPath = "/" + urlPath
 		}
 		out = append(out, r.Prefix()+urlPath+":")
 
@@ -146,22 +151,32 @@ func (r *OpenAPIRenderer) Pre(t *types.TypeNode) []string {
 	if !r.Options.DeReference && jsonType.TypeRef != "" {
 		out = append(out, fmt.Sprintf(`%s$ref: '#/%s/%s'`, r.Prefix(), SCHEMA_PATH, jsonType.TypeRef))
 	} else {
+		// Build description field.
+		descriptionTokens := []string{}
 		if r.Options.DeReference && jsonType.TypeRef != "" {
-			out = append(out, fmt.Sprintf(`%sdescription: 'From $ref: #/%s/%s'`, r.Prefix(), SCHEMA_PATH, jsonType.TypeRef))
+			descriptionTokens = append(descriptionTokens, fmt.Sprintf(`From $ref: #/%s/%s`, SCHEMA_PATH, jsonType.TypeRef))
 		}
+		if t.Error != "" {
+			descriptionTokens = append(descriptionTokens, fmt.Sprintf("ERROR=%s", t.Error))
+		}
+		if len(descriptionTokens) > 0 {
+			out = append(out, fmt.Sprintf("%sdescription: '%s'", r.Prefix(), strings.Join(descriptionTokens, ";")))
+		}
+
 		switch t.Type {
 		case generictype.Struct.String():
 			out = append(out,
 				r.Prefix()+"type: object",
 				r.Prefix()+"additionalProperties: false",
-				r.Prefix()+"properties:",
 			)
+			if len(t.Children) > 0 {
+				out = append(out, r.Prefix()+"properties:")
+			}
 			r.SetIndent(r.Indent() + 1)
 		case generictype.Map.String():
 			out = append(out,
 				r.Prefix()+"type: object",
 				r.Prefix()+"additionalProperties: true",
-				r.Prefix()+"properties:",
 			)
 			r.SetIndent(r.Indent() + 1)
 		case generictype.List.String():
@@ -206,12 +221,6 @@ func (r *OpenAPIRenderer) Pre(t *types.TypeNode) []string {
 				r.Prefix()+"type: "+t.Type,
 			)
 		}
-	}
-
-	if t.Error != "" {
-		out = append(out,
-			r.Prefix()+"error: "+t.Error,
-		)
 	}
 
 	return out

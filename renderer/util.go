@@ -12,8 +12,8 @@ func RenderSchema(schema *types.Schema, r Renderer) []string {
 
 	// Print type refs.
 	if !r.DeReference() {
-		if len(schema.TypeRefNode().Children) > 0 {
-			rendered := RenderType(schema.TypeRefNode(), r)
+		if len(schema.TypeRef.Children) > 0 {
+			rendered := RenderType(schema.TypeRef, r)
 			for _, r := range rendered {
 				if r != "" {
 					out = append(out, r)
@@ -23,8 +23,8 @@ func RenderSchema(schema *types.Schema, r Renderer) []string {
 	}
 
 	//	Print types.
-	if len(schema.RootNode().Children) > 0 {
-		rendered := RenderType(schema.RootNode(), r)
+	if len(schema.Root.Children) > 0 {
+		rendered := RenderType(schema.Root, r)
 		for _, r := range rendered {
 			if r != "" {
 				out = append(out, r)

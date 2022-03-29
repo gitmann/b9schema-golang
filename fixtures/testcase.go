@@ -5,8 +5,8 @@ type TestCase struct {
 	Value interface{}
 
 	// Expected strings for reference and de-reference.
-	RefStrings     []string
-	DerefStrings   []string
-	JSONStrings    []string
-	OpenAPIStrings []string
+	// - map[render engine][de-reference flag][]string
+	Want map[string]WantSet
 }
+
+type WantSet map[bool][]string

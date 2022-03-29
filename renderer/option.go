@@ -1,7 +1,7 @@
 package renderer
 
 type Options struct {
-	// DeReference converts TypeRefID to their included types.
+	// DeReference converts TypeRef to their included types.
 	// - If TyepRefs have a cyclical relationship, the last TypeRef is kept as a TypeRef.
 	DeReference bool
 

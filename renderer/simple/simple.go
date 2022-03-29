@@ -72,8 +72,8 @@ func (r *SimpleRenderer) Post(t *types.TypeNode) []string {
 // - If TypeRef is set, suffix with "TypeRef", otherwise "-"
 // - If Error is set, wrap entire string with "!"
 func (r *SimpleRenderer) Path(t *types.TypeNode) []string {
-	if t.Parent == "" {
-		// RootID element. Start a new path.
+	if t.Parent == nil {
+		// Root element. Start a new path.
 		return []string{t.Name}
 	}
 
@@ -115,5 +115,5 @@ func (r *SimpleRenderer) Path(t *types.TypeNode) []string {
 		path = fmt.Sprintf("%q", path)
 	}
 
-	return append(r.Path(t.Node(t.Parent)), path)
+	return append(r.Path(t.Parent), path)
 }

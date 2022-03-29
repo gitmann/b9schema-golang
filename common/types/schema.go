@@ -1,35 +1,33 @@
 package types
 
+const (
+	ROOT_NAME    = "Root"
+	TYPEREF_NAME = "TypeRef"
+)
+
 // Schema is the result of parsing types.
 type Schema struct {
-	// RootID is the node ID of the root of types in the order found.
-	RootID string
+	// Root is the node ID of the root of types in the order found.
+	Root *TypeNode
 
-	// TypeRefID is the node ID that holds a map of named types by name.
-	TypeRefID string
-
-	// NodePool is the pool of all TypeNodes.
-	NodePool *NodePool
+	// TypeRef is the node ID that holds a map of named types by name.
+	TypeRef *TypeNode
 }
 
 // NewSchema initializes a new schema with root nodes.
 func NewSchema(nativeDialect string) *Schema {
-	pool := NewNodePool()
-
 	schema := &Schema{
-		RootID:    pool.NewRootNode("Root", nativeDialect).ID,
-		TypeRefID: pool.NewRootNode("TypeRef", nativeDialect).ID,
-
-		NodePool: pool,
+		Root:    NewRootNode(ROOT_NAME, nativeDialect),
+		TypeRef: NewRootNode(TYPEREF_NAME, nativeDialect),
 	}
 
 	return schema
 }
 
-func (schema *Schema) RootNode() *TypeNode {
-	return schema.NodePool.Nodes[schema.RootID]
-}
-
-func (schema *Schema) TypeRefNode() *TypeNode {
-	return schema.NodePool.Nodes[schema.TypeRefID]
+// CopyWithoutNative removes all native dialects for the minimal schema.
+func (schema *Schema) CopyWithoutNative() *Schema {
+	return &Schema{
+		Root:    schema.Root.CopyWithoutNative(),
+		TypeRef: schema.TypeRef.CopyWithoutNative(),
+	}
 }

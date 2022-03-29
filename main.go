@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/ghodss/yaml"
 	"github.com/gitmann/b9schema-golang/reflector"
 	"github.com/gitmann/b9schema-golang/renderer"
 	"github.com/gitmann/b9schema-golang/renderer/openapi"
@@ -31,13 +32,23 @@ func main() {
 
 	schema := r.Schema
 
-	//// Print schema as JSON.
-	//if b, err := json.MarshalIndent(schema, "", "  "); err != nil {
-	//	fmt.Printf("error marshalling schema: %s\n", err)
-	//} else {
-	//	fmt.Println(string(b))
-	//}
+	// Print schema as YAML.
+	fmt.Println("********** YAML")
+	if b, err := yaml.Marshal(schema); err != nil {
+		fmt.Printf("error marshalling schema: %s\n", err)
+	} else {
+		fmt.Println(string(b))
+	}
 
+	fmt.Println("********** YAML (min)")
+	minSchema := schema.CopyWithoutNative()
+	if b, err := yaml.Marshal(minSchema); err != nil {
+		fmt.Printf("error marshalling schema: %s\n", err)
+	} else {
+		fmt.Println(string(b))
+	}
+
+	fmt.Println("********** OpenAPI")
 	opt := renderer.NewOptions()
 	opt.DeReference = true
 

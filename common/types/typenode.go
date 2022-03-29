@@ -2,76 +2,17 @@ package types
 
 import (
 	"fmt"
-	"github.com/gitmann/b9schema-golang/common/enum/generictype"
-	"github.com/gitmann/b9schema-golang/common/enum/threeflag"
 	"reflect"
 	"sort"
-	"strings"
 	"unicode"
+
+	"github.com/gitmann/b9schema-golang/common/enum/generictype"
+	"github.com/gitmann/b9schema-golang/common/enum/threeflag"
 )
-
-// NodePool creates and holds all TypeNodes.
-type NodePool struct {
-	// Nodes is a map of all TypeNodes by ID.
-	Nodes map[string]*TypeNode
-
-	// LastID holds the last assigned ID number. IDs are assigned sequentially.
-	LastID int
-}
-
-// NewNodePool initializes a new NodePool.
-func NewNodePool() *NodePool {
-	return &NodePool{
-		Nodes:  map[string]*TypeNode{},
-		LastID: 0,
-	}
-}
-
-// nextID returns the next TypeNode ID.
-func (np *NodePool) nextID() string {
-	np.LastID += 1
-	return fmt.Sprintf("n%05d", np.LastID)
-}
-
-// NewTypeNode returns a new TypeNode in the current NodePool.
-func (np *NodePool) NewTypeNode(name, dialect string) *TypeNode {
-	t := &TypeNode{
-		ID: np.nextID(),
-
-		Children: []string{},
-
-		Name: name,
-
-		NativeDialect: dialect,
-		Native:        map[string]*NativeType{},
-
-		pool: np,
-	}
-	np.Nodes[t.ID] = t
-
-	if t.NativeDialect != "" {
-		t.Native[t.NativeDialect] = NewNativeType(t.NativeDialect)
-	}
-
-	return t
-}
-
-// NewRootNode creates a new type element that is a root of a tree.
-func (np *NodePool) NewRootNode(name, dialect string) *TypeNode {
-	r := np.NewTypeNode(name, dialect)
-
-	r.Type = generictype.Root.String()
-	r.TypeCategory = generictype.Root.Category().String()
-
-	return r
-}
 
 // TypeNode holds type information about an element.
 // - TypeNode should be cross-platform and only use basic types.
 type TypeNode struct {
-	// Unique identifier for an element.
-	ID string
-
 	// Optional Name and Description of element.
 	// - Name applies to struct/map types with string keys.
 	Name        string `json:",omitempty"`
@@ -91,7 +32,7 @@ type TypeNode struct {
 	NativeDialect string `json:",omitempty"`
 
 	// Native type features by dialect name.
-	Native map[string]*NativeType
+	Native map[string]*NativeType `json:",omitempty"`
 
 	// Capture error if element cannot reflect.
 	Error string `json:",omitempty"`
@@ -101,25 +42,41 @@ type TypeNode struct {
 	MetaKey string `json:",omitempty"`
 
 	// Pointers to Parent and Child ID strings.
-	Parent   string   `json:",omitempty"`
-	Children []string `json:",omitempty"`
-
-	// Keep a pointer to the master NodePool in all Nodes.
-	pool *NodePool
+	Parent   *TypeNode   `json:"-"`
+	Children []*TypeNode `json:",omitempty"`
 }
 
-// Node is a utility wrapper that returns the TypeNode associated with the given ID.
-func (t *TypeNode) Node(id string) *TypeNode {
-	if id == "" {
-		// Default to the current node if no ID.
-		id = t.ID
+// NewTypeNode returns a new TypeNode in the current NodePool.
+func NewTypeNode(name, dialect string) *TypeNode {
+	t := &TypeNode{
+		Children: []*TypeNode{},
+
+		Name: name,
+
+		NativeDialect: dialect,
+		Native:        map[string]*NativeType{},
 	}
-	return t.pool.Nodes[id]
+
+	if t.NativeDialect != "" {
+		t.Native[t.NativeDialect] = NewNativeType(t.NativeDialect)
+	}
+
+	return t
+}
+
+// NewRootNode creates a new type element that is a root of a tree.
+func NewRootNode(name, dialect string) *TypeNode {
+	r := NewTypeNode(name, dialect)
+
+	r.Type = generictype.Root.String()
+	r.TypeCategory = generictype.Root.Category().String()
+
+	return r
 }
 
 // NewChild creates a new type element that is a child of the current one.
 func (t *TypeNode) NewChild(name string) *TypeNode {
-	childElem := t.pool.NewTypeNode(name, t.NativeDialect)
+	childElem := NewTypeNode(name, t.NativeDialect)
 	t.AddChild(childElem)
 
 	return childElem
@@ -135,7 +92,7 @@ func (t *TypeNode) AddChild(childElem *TypeNode) {
 
 	childElem.SetParent(t)
 
-	t.Children = append(t.Children, childElem.ID)
+	t.Children = append(t.Children, childElem)
 }
 
 // MapKey returns a key for a TypeNode as the first, non-empty value of:
@@ -149,15 +106,14 @@ func (t *TypeNode) MapKey() string {
 	if t.MetaKey != "" {
 		return t.MetaKey
 	}
-	return t.ID
+	return ""
 }
 
 // ChildMap returns a map of Children name --> *TypeNode
 // - Output map can be passed to ChildKeys, ContainsChild, ChildByName for reuse.
 func (t *TypeNode) ChildMap() map[string]*TypeNode {
 	out := map[string]*TypeNode{}
-	for _, childID := range t.Children {
-		childNode := t.pool.Nodes[childID]
+	for _, childNode := range t.Children {
 		out[childNode.MapKey()] = childNode
 	}
 	return out
@@ -200,12 +156,11 @@ func (t *TypeNode) ChildByName(name string, m map[string]*TypeNode) *TypeNode {
 
 // RemoveAllChildren removes all children from the current element.
 func (t *TypeNode) RemoveAllChildren() {
-	for _, childID := range t.Children {
-		childNode := t.pool.Nodes[childID]
+	for _, childNode := range t.Children {
 		childNode.RemoveParent()
 	}
 
-	t.Children = []string{}
+	t.Children = []*TypeNode{}
 }
 
 // RemoveChild removes the given child from the Children list.
@@ -217,13 +172,13 @@ func (t *TypeNode) RemoveChild(childElem *TypeNode) {
 	}
 
 	// Copy all children except the given one.
-	newChildren := []string{}
-	for _, childID := range t.Children {
-		if childID != childElem.ID {
-			newChildren = append(newChildren, childID)
+	newChildren := []*TypeNode{}
+	for _, childNode := range t.Children {
+		if childNode != childElem {
+			newChildren = append(newChildren, childNode)
 		} else {
 			// Remove parent from child element.
-			childElem.Parent = ""
+			childElem.Parent = nil
 		}
 	}
 
@@ -233,10 +188,10 @@ func (t *TypeNode) RemoveChild(childElem *TypeNode) {
 // Copy makes a copy of a TypeNode and its Children.
 // - The copied element has no Parent.
 func (t *TypeNode) Copy() *TypeNode {
-	n := t.pool.NewTypeNode(t.Name, t.NativeDialect)
+	n := NewTypeNode(t.Name, t.NativeDialect)
 
 	// Copy simple fields.
-	n.Parent = ""
+	n.Parent = nil
 	n.Description = t.Description
 	n.Type = t.Type
 	n.TypeCategory = t.TypeCategory
@@ -245,9 +200,8 @@ func (t *TypeNode) Copy() *TypeNode {
 	n.MetaKey = t.MetaKey
 
 	// Copy Children with new element as parent.
-	for _, childID := range t.Children {
-		childElem := t.pool.Nodes[childID]
-		newChild := childElem.Copy()
+	for _, childNode := range t.Children {
+		newChild := childNode.Copy()
 		n.AddChild(newChild)
 	}
 
@@ -259,10 +213,37 @@ func (t *TypeNode) Copy() *TypeNode {
 	return n
 }
 
+// CopyWithoutNative makes a copy of a TypeNode and its Children without Native types.
+// - The copied element has no Parent.
+func (t *TypeNode) CopyWithoutNative() *TypeNode {
+	n := NewTypeNode(t.Name, "")
+
+	// Copy simple fields.
+	n.Parent = nil
+	n.Description = t.Description
+	n.Type = t.Type
+	n.TypeCategory = t.TypeCategory
+	n.TypeRef = t.TypeRef
+	n.Error = t.Error
+	n.MetaKey = t.MetaKey
+
+	// Copy Children with new element as parent.
+	for _, childNode := range t.Children {
+		newChild := childNode.CopyWithoutNative()
+		n.AddChild(newChild)
+	}
+
+	// Remove Native types.
+	n.Native = nil
+
+	return n
+}
+
 // GetNativeType returns a new NativeType with Name,Type,TypeRef,Include set.
 func (t *TypeNode) GetNativeType(dialect string) *NativeType {
 	// Start with a new native type that is a clone of the current type element.
 	newType := NewNativeType(dialect)
+
 	newType.Name = t.Name
 	newType.Type = t.Type
 	newType.TypeRef = t.NativeDefault().TypeRef
@@ -272,13 +253,13 @@ func (t *TypeNode) GetNativeType(dialect string) *NativeType {
 	oldType := t.Native[dialect]
 	if oldType != nil {
 		// Replace with values from oldType if set.
-		if oldType.Name != "" {
+		if newType.Name != "" && oldType.Name != "" {
 			newType.Name = oldType.Name
 		}
-		if oldType.Type != "" {
+		if newType.Type != "" && oldType.Type != "" {
 			newType.Type = oldType.Type
 		}
-		if oldType.TypeRef != "" {
+		if newType.TypeRef != "" && oldType.TypeRef != "" {
 			newType.TypeRef = oldType.TypeRef
 		}
 		if oldType.Include != threeflag.Undefined {
@@ -291,9 +272,8 @@ func (t *TypeNode) GetNativeType(dialect string) *NativeType {
 
 // RemoveParent removes the Parent.
 func (t *TypeNode) RemoveParent() {
-	if t.Parent != "" {
-		parentElem := t.pool.Nodes[t.Parent]
-		parentElem.RemoveChild(t)
+	if t.Parent != nil {
+		t.Parent.RemoveChild(t)
 	}
 }
 
@@ -303,20 +283,20 @@ func (t *TypeNode) SetParent(p *TypeNode) {
 		panic("parent cannot be nil")
 	}
 
-	if t.ID == p.ID {
+	if t == p {
 		panic("element cannot be its own parent")
 	}
 
 	t.RemoveParent()
 
-	t.Parent = p.ID
+	t.Parent = p
 }
 
 // GetName returns the alias for the given lang or Name.
-func (t *TypeNode) GetName(lang string) string {
+func (t *TypeNode) GetName(dialect string) string {
 	if t.Native != nil {
-		if t.Native[lang] != nil {
-			if a := t.Native[lang].Name; a != "" {
+		if t.Native[dialect] != nil {
+			if a := t.Native[dialect].Name; a != "" {
 				return a
 			}
 		}
@@ -361,62 +341,12 @@ func (t *TypeNode) IsExported() bool {
 
 // Ancestors returns a slice of all ancestors of the given TypeNode.
 func (t *TypeNode) Ancestors() []*TypeNode {
-	if t.Parent == "" {
-		// RootID element. Start a new path.
+	if t.Parent == nil {
+		// Root element. Start a new path.
 		return []*TypeNode{t}
 	}
 
-	parentNode := t.pool.Nodes[t.Parent]
-	return append(parentNode.Ancestors(), t)
-}
-
-// PathList keeps a list of path string elements that form a unique identifier for a TypeNode.
-// - PathList behaves like a stack with Push/Pop operators.
-type PathList struct {
-	paths []string
-}
-
-func NewPathList() *PathList {
-	return &PathList{paths: make([]string, 0)}
-}
-
-func (p *PathList) Len() int {
-	return len(p.paths)
-}
-
-func (p *PathList) Push(elem string) {
-	// Ignore empty elements.
-	if elem == "" {
-		return
-	}
-	p.paths = append(p.paths, elem)
-}
-
-func (p *PathList) Pop() string {
-	if len(p.paths) == 0 {
-		return ""
-	}
-
-	elem := p.paths[len(p.paths)-1]
-	p.paths = p.paths[:len(p.paths)-1]
-	return elem
-}
-
-func (p *PathList) Copy() *PathList {
-	n := &PathList{paths: make([]string, len(p.paths))}
-	copy(n.paths, p.paths)
-	return n
-}
-
-func (p *PathList) String() string {
-	out := make([]string, len(p.paths))
-	for i, s := range p.paths {
-		if strings.Contains(s, ".") {
-			s = fmt.Sprintf("%q", s)
-		}
-		out[i] = s
-	}
-	return strings.Join(out, ".")
+	return append(t.Parent.Ancestors(), t)
 }
 
 // NativeOption stores options as key-value pairs but returns a list of strings.
