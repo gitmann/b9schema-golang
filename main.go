@@ -52,7 +52,34 @@ func main() {
 	opt := renderer.NewOptions()
 	opt.DeReference = true
 
-	swagger := openapi.NewOpenAPIRenderer(openapi.NewMetaData("", ""), opt)
+	meta := openapi.NewMetaData("main.go demo", "v1.0.0")
+	meta.Info.Description = "Demonstration of OpenAPI rendering."
+	meta.Info.TermsOfService = "https://some.site/tos"
+	meta.Info.Contact = &openapi.ContactObject{
+		Name:  "Contact Name",
+		URL:   "https://some.site/contact",
+		Email: "contact@some.site",
+	}
+	meta.Info.License = &openapi.LicenseObject{
+		Name: "This is the license.",
+		URL:  "https://license.server/license",
+	}
+	meta.ExternalDocs = &openapi.ExternalDocumentationObject{
+		URL:         "https://some.site/docs",
+		Description: "This is the documentation site.",
+	}
+	meta.Servers = []*openapi.ServerObject{
+		{
+			URL:         "https://a.b.com/",
+			Description: "Main server",
+		},
+		{
+			URL:         "https://a.b.c.com/",
+			Description: "Backup server",
+		},
+	}
+
+	swagger := openapi.NewOpenAPIRenderer(meta, opt)
 	outLines, err := swagger.ProcessSchema(schema)
 	if err != nil {
 		fmt.Println(err)

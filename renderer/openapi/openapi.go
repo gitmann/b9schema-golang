@@ -3,7 +3,6 @@ package openapi
 import (
 	"errors"
 	"fmt"
-	"github.com/ghodss/yaml"
 	"github.com/gitmann/b9schema-golang/common/enum/generictype"
 	"github.com/gitmann/b9schema-golang/common/enum/threeflag"
 	"github.com/gitmann/b9schema-golang/common/types"
@@ -44,7 +43,7 @@ func (r *OpenAPIRenderer) ProcessSchema(schema *types.Schema, settings ...string
 	}
 
 	// Header
-	if b, err := yaml.Marshal(r.MetaData); err != nil {
+	if b, err := r.MetaData.MarshalYAML(r.Options.Prefix); err != nil {
 		return out, err
 	} else {
 		out = append(out, string(b))

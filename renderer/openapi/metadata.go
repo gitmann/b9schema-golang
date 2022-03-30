@@ -3,6 +3,10 @@ package openapi
 import (
 	"errors"
 	"fmt"
+	"github.com/ghodss/yaml"
+	"github.com/gitmann/b9schema-golang/common/util"
+	"net/mail"
+	"net/url"
 	"strings"
 )
 
@@ -46,6 +50,52 @@ func NewMetaData(title, version string) *MetaData {
 	}
 }
 
+// MarshalYAML builds YAML strings in a specific key order.
+func (m *MetaData) MarshalYAML(prefix string) ([]byte, error) {
+	outLines := []string{}
+
+	// OpenAPI
+	if b, err := yaml.Marshal(m.OpenAPI); err != nil {
+		return nil, err
+	} else {
+		out := fmt.Sprintf(`openapi: %s`, strings.TrimSpace(string(b)))
+		outLines = append(outLines, out)
+	}
+
+	// Info
+	if b, err := m.Info.MarshalYAML(prefix); err != nil {
+		return nil, err
+	} else {
+		outLines = append(outLines, `info:`)
+		outLines = util.AppendStrings(outLines, []string{string(b)}, prefix)
+	}
+
+	// ExternalDocs
+	if m.ExternalDocs != nil {
+		if b, err := yaml.Marshal(m.ExternalDocs); err != nil {
+			return nil, err
+		} else {
+			outLines = append(outLines, `externalDocs:`)
+			outLines = util.AppendStrings(outLines, []string{string(b)}, prefix)
+		}
+	}
+
+	// Servers
+	if m.Servers != nil {
+		if b, err := yaml.Marshal(m.Servers); err != nil {
+			return nil, err
+		} else {
+			outLines = append(outLines, `servers:`)
+			outLines = util.AppendStrings(outLines, []string{string(b)}, prefix)
+		}
+	}
+
+	outLines = append(outLines, "")
+	finalOut := strings.Join(outLines, "\n")
+
+	return []byte(finalOut), nil
+}
+
 // Validate checks that metadata contains required fields.
 func (m *MetaData) Validate() error {
 	if !strings.HasPrefix(m.OpenAPI, "3.0") {
@@ -54,14 +104,20 @@ func (m *MetaData) Validate() error {
 
 	if m.Info == nil {
 		return errors.New("missing 'info' object")
+	} else if err := m.Info.Validate(); err != nil {
+		return err
 	}
 
-	if m.Info.Title == "" {
-		return errors.New("'info.title' is required")
+	if m.ExternalDocs != nil {
+		if err := m.ExternalDocs.Validate(); err != nil {
+			return err
+		}
 	}
 
-	if m.Info.Version == "" {
-		return errors.New("'info.version' is required")
+	for _, srv := range m.Servers {
+		if err := srv.Validate(); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -85,6 +141,94 @@ type InfoObject struct {
 	License *LicenseObject `json:"license,omitempty"`
 }
 
+func (i *InfoObject) Validate() error {
+	if i.Title == "" {
+		return errors.New("'info.title' is required")
+	}
+	if i.Version == "" {
+		return errors.New("'info.version' is required")
+	}
+
+	if i.TermsOfService != "" {
+		if _, err := url.ParseRequestURI(i.TermsOfService); err != nil {
+			return errors.New("'info.termsOfService' is not a valid URL")
+		}
+	}
+
+	if i.Contact != nil {
+		if err := i.Contact.Validate(); err != nil {
+			return err
+		}
+	}
+
+	if i.License != nil {
+		if err := i.License.Validate(); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (i *InfoObject) MarshalYAML(prefix string) ([]byte, error) {
+	outLines := []string{}
+
+	// Title
+	if b, err := yaml.Marshal(i.Title); err != nil {
+		return nil, err
+	} else {
+		outLines = append(outLines, fmt.Sprintf(`title: %s`, strings.TrimSpace(string(b))))
+	}
+
+	// Version
+	if b, err := yaml.Marshal(i.Version); err != nil {
+		return nil, err
+	} else {
+		outLines = append(outLines, fmt.Sprintf(`version: %s`, strings.TrimSpace(string(b))))
+	}
+
+	// Description
+	if i.Description != "" {
+		if b, err := yaml.Marshal(i.Description); err != nil {
+			return nil, err
+		} else {
+			outLines = append(outLines, fmt.Sprintf(`description: %s`, strings.TrimSpace(string(b))))
+		}
+	}
+
+	// TermsOfService
+	if i.TermsOfService != "" {
+		if b, err := yaml.Marshal(i.TermsOfService); err != nil {
+			return nil, err
+		} else {
+			outLines = append(outLines, fmt.Sprintf(`termsOfService: %s`, strings.TrimSpace(string(b))))
+		}
+	}
+
+	// Contact
+	if i.Contact != nil {
+		if b, err := yaml.Marshal(i.Contact); err != nil {
+			return nil, err
+		} else {
+			outLines = append(outLines, `contact:`)
+			outLines = util.AppendStrings(outLines, []string{string(b)}, prefix)
+		}
+	}
+
+	// License
+	if i.License != nil {
+		if b, err := yaml.Marshal(i.License); err != nil {
+			return nil, err
+		} else {
+			outLines = append(outLines, `license:`)
+			outLines = util.AppendStrings(outLines, []string{string(b)}, prefix)
+		}
+	}
+
+	finalOut := strings.Join(outLines, "\n")
+	return []byte(finalOut), nil
+}
+
 type ContactObject struct {
 	//The identifying name of the contact person/organization.
 	Name string `json:"name"`
@@ -94,11 +238,41 @@ type ContactObject struct {
 	Email string `json:"email,omitempty"`
 }
 
+func (c *ContactObject) Validate() error {
+	if c.URL != "" {
+		if _, err := url.ParseRequestURI(c.URL); err != nil {
+			return errors.New("'contact.url' is not a valid URL")
+		}
+	}
+
+	if c.Email != "" {
+		if _, err := mail.ParseAddress(c.Email); err != nil {
+			return errors.New("`contact.email is not a valid email address")
+		}
+	}
+
+	return nil
+}
+
 type LicenseObject struct {
 	// REQUIRED. The license name used for the API.
 	Name string `json:"name"`
 	// A URL to the license used for the API. MUST be in the format of a URL.
 	URL string `json:"url,omitempty"`
+}
+
+func (lic *LicenseObject) Validate() error {
+	if lic.Name == "" {
+		return errors.New("'license.name' is required")
+	}
+
+	if lic.URL != "" {
+		if _, err := url.ParseRequestURI(lic.URL); err != nil {
+			return errors.New("'license.url' is not a valid URL")
+		}
+	}
+
+	return nil
 }
 
 type ServerObject struct {
@@ -112,11 +286,27 @@ type ServerObject struct {
 	// NOTE: Variables is omitted here!!!
 }
 
+func (s *ServerObject) Validate() error {
+	if _, err := url.ParseRequestURI(s.URL); err != nil {
+		return errors.New("'server.url' is not a valid URL")
+	}
+
+	return nil
+}
+
 type ExternalDocumentationObject struct {
 	// REQUIRED. The URL for the target documentation. Value MUST be in the format of a URL.
 	URL string `json:"url"`
 	//description	string	A short description of the target documentation. CommonMark syntax MAY be used for rich text representation.
 	Description string `json:"description,omitempty"`
+}
+
+func (d *ExternalDocumentationObject) Validate() error {
+	if _, err := url.ParseRequestURI(d.URL); err != nil {
+		return errors.New("'externalDocs.url' is not a valid URL")
+	}
+
+	return nil
 }
 
 type PathsObject map[string]*PathItemObject
