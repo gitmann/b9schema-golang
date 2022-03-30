@@ -85,7 +85,6 @@ func (r *Reflector) reflectTypeImpl(ancestorTypeRef types.AncestorTypeRef, curre
 	// Get generic type for value.
 	genericType := generictype.GenericTypeOf(v)
 	currentElem.Type = genericType.String()
-	currentElem.TypeCategory = genericType.Category().String()
 
 	// ERROR CHECKING
 	// Check for invalid types. These may panic on some operations so we exit quickly with minimal reflection.

@@ -3,13 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/ghodss/yaml"
-	"github.com/gitmann/b9schema-golang/common/util"
-	"github.com/gitmann/b9schema-golang/fixtures"
-	"github.com/gitmann/b9schema-golang/reflector"
-	"github.com/gitmann/b9schema-golang/renderer"
-	"github.com/gitmann/b9schema-golang/renderer/openapi"
-	"github.com/gitmann/b9schema-golang/renderer/simple"
 	"io"
 	"os"
 	"os/exec"
@@ -18,6 +11,14 @@ import (
 	"testing"
 	"time"
 	"unsafe"
+
+	"github.com/ghodss/yaml"
+	"github.com/gitmann/b9schema-golang/common/util"
+	"github.com/gitmann/b9schema-golang/fixtures"
+	"github.com/gitmann/b9schema-golang/reflector"
+	"github.com/gitmann/b9schema-golang/renderer"
+	"github.com/gitmann/b9schema-golang/renderer/openapi"
+	"github.com/gitmann/b9schema-golang/renderer/simple"
 )
 
 const (
@@ -3186,7 +3187,7 @@ func validateOpenAPI(t *testing.T, name, yamlStr string) bool {
 	}
 
 	if err := cmd.Start(); err != nil {
-		t.Errorf("TEST_FAIL %s: cmd start err=%s", name, err)
+		t.Errorf("TEST_FAIL %s: cmd start err=%s\nIs swagger-cli installed? 'npm install -g @apidevtools/swagger-cli'", name, err)
 		return false
 	}
 
