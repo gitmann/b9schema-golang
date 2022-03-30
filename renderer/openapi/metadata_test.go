@@ -1,7 +1,6 @@
 package openapi
 
 import (
-	"github.com/ghodss/yaml"
 	"github.com/gitmann/b9schema-golang/common/util"
 	"strings"
 	"testing"
@@ -18,10 +17,10 @@ func TestNewMetaData(t *testing.T) {
 			name: "default",
 			meta: NewMetaData("", ""),
 			wantYAML: []string{
+				`openapi: 3.0.0`,
 				`info:`,
 				`  title: default title`,
 				`  version: default version`,
-				`openapi: 3.0.0`,
 			},
 		},
 		{
@@ -59,33 +58,33 @@ func TestNewMetaData(t *testing.T) {
 				},
 			},
 			wantYAML: []string{
-				`externalDocs:`,
-				`  description: This is the test doc site.`,
-				`  url: https://test.doc.site.com/path/to/docs`,
+				`openapi: 3.0.0`,
 				`info:`,
+				`  title: This is the title.`,
+				`  version: v1.2.3`,
+				`  description: This is a description.`,
+				`  termsOfService: https://test.tos.site.com/terms`,
 				`  contact:`,
 				`    email: support@site.com`,
 				`    name: Support Team`,
 				`    url: https://support.site.com/`,
-				`  description: This is a description.`,
 				`  license:`,
 				`    name: This is the license.`,
 				`    url: https://license.site.com/`,
-				`  termsOfService: https://test.tos.site.com/terms`,
-				`  title: This is the title.`,
-				`  version: v1.2.3`,
-				`openapi: 3.0.0`,
+				`externalDocs:`,
+				`  description: This is the test doc site.`,
+				`  url: https://test.doc.site.com/path/to/docs`,
 				`servers:`,
-				`- description: Production server.`,
-				`  url: https://www.site.com`,
-				`- description: Development server.`,
-				`  url: https://www.dev.site.com`,
+				`  - description: Production server.`,
+				`    url: https://www.site.com`,
+				`  - description: Development server.`,
+				`    url: https://www.dev.site.com`,
 			},
 		},
 	}
 
 	for _, test := range testCases {
-		if b, err := yaml.Marshal(test.meta); err != nil {
+		if b, err := test.meta.MarshalYAML("  "); err != nil {
 			t.Errorf("TEST_FAIL %s: yaml err=%s", test.name, err)
 		} else {
 			gotYAML := strings.Split(string(b), "\n")

@@ -102,8 +102,10 @@ func Capitalize(s string) string {
 // AppendStrings adds non-empty strings from in to out and returns a new slice.
 func AppendStrings(out []string, in []string, prefix string) []string {
 	for _, s := range in {
-		if s != "" {
-			out = append(out, prefix+s)
+		for _, line := range strings.Split(s, "\n") {
+			if line != "" {
+				out = append(out, prefix+line)
+			}
 		}
 	}
 	return out
