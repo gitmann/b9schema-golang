@@ -174,25 +174,31 @@ var Root = &GenericType{
 	kinds:       []string{},
 }
 
-// genericTypeLookup provides fast mapping from reflect.Kind to GenericType.
-var genericTypeLookup map[string]*GenericType
+// lookupByKind provides lookups from reflect.Kind.String to GenericType.
+var lookupByKind map[string]*GenericType
 
-// init() initializes the genericTypeLookup map.
+// lookupByType provides lookups from generic type string to GenericType.
+var lookupByType map[string]*GenericType
+
+// init() initializes the lookupByKind map.
 func init() {
-	genericTypeLookup = map[string]*GenericType{}
-	pathDefaultLookup = map[string]string{}
+	lookupByKind = map[string]*GenericType{}
+	lookupByType = map[string]*GenericType{}
 
 	// mapTypes is a utility function to create map entries for the given GenericType.
 	mapTypes := func(t *GenericType) {
 		for _, k := range t.kinds {
 			// Panic if duplicate type mappings exist.
-			if genericTypeLookup[k] != nil {
-				panic(fmt.Sprintf("duplicate GenericType mapping for %q", t))
+			if lookupByKind[k] != nil {
+				panic(fmt.Sprintf("duplicate lookupByKind mapping for %q", k))
 			}
-			genericTypeLookup[k] = t
+			lookupByKind[k] = t
 		}
 
-		pathDefaultLookup[t.String()] = t.PathDefault()
+		if lookupByType[t.String()] != nil {
+			panic(fmt.Sprintf("duplicate lookupByType mapping for %q", t.String()))
+		}
+		lookupByType[t.String()] = t
 	}
 
 	mapTypes(Invalid)
@@ -210,11 +216,13 @@ func init() {
 
 	mapTypes(Interface)
 	mapTypes(Pointer)
+
+	mapTypes(Root)
 }
 
 // GenericTypeOf returns the GenericType of the given reflect.Value.
 func GenericTypeOf(v reflect.Value) *GenericType {
-	if t := genericTypeLookup[v.Kind().String()]; t != nil {
+	if t := lookupByKind[v.Kind().String()]; t != nil {
 		if t == Invalid {
 			// Return invalid types immediately.
 			return t
@@ -223,7 +231,7 @@ func GenericTypeOf(v reflect.Value) *GenericType {
 		// Look for special types.
 		if v.Type().PkgPath() != "" {
 			fullPath := FullPathOf(v)
-			if specialType := genericTypeLookup[fullPath]; specialType != nil {
+			if specialType := lookupByKind[fullPath]; specialType != nil {
 				return specialType
 			}
 		}
@@ -242,6 +250,19 @@ func GenericTypeOf(v reflect.Value) *GenericType {
 	return Invalid
 }
 
+// FromType returns the GenericType associated with a given string or nil if not found.
+func FromType(typeString string) *GenericType {
+	return lookupByType[typeString]
+}
+
+// PathDefaultOfType returns the path default for a given generic type string.
+func PathDefaultOfType(typeString string) string {
+	if gt := FromType(typeString); gt != nil {
+		return gt.PathDefault()
+	}
+	return typeString
+}
+
 // FullPathOf returns the full package path for a Value.
 func FullPathOf(v reflect.Value) string {
 	return fmt.Sprintf("%s.%s", v.Type().PkgPath(), v.Type().Name())
@@ -258,15 +279,4 @@ func tryConversion(v reflect.Value, t reflect.Type) (newValue reflect.Value, ok 
 	}()
 
 	return v.Convert(t), true
-}
-
-// pathDefaultLookup provides fast mapping from genericType.String to pathDefault
-var pathDefaultLookup map[string]string
-
-// PathDefaultOfType returns the path default for a given generic type string.
-func PathDefaultOfType(typeString string) string {
-	if p := pathDefaultLookup[typeString]; p != "" {
-		return p
-	}
-	return typeString
 }

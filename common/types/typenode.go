@@ -22,8 +22,7 @@ type TypeNode struct {
 	Nullable bool `json:",omitempty"`
 
 	// Generic type of element.
-	TypeCategory string
-	Type         string
+	Type string
 
 	// TypeRef holds the name of a type (e.g. struct)
 	TypeRef string `json:",omitempty"`
@@ -69,7 +68,6 @@ func NewRootNode(name, dialect string) *TypeNode {
 	r := NewTypeNode(name, dialect)
 
 	r.Type = generictype.Root.String()
-	r.TypeCategory = generictype.Root.Category().String()
 
 	return r
 }
@@ -194,7 +192,6 @@ func (t *TypeNode) Copy() *TypeNode {
 	n.Parent = nil
 	n.Description = t.Description
 	n.Type = t.Type
-	n.TypeCategory = t.TypeCategory
 	n.TypeRef = t.TypeRef
 	n.Error = t.Error
 	n.MetaKey = t.MetaKey
@@ -222,7 +219,6 @@ func (t *TypeNode) CopyWithoutNative() *TypeNode {
 	n.Parent = nil
 	n.Description = t.Description
 	n.Type = t.Type
-	n.TypeCategory = t.TypeCategory
 	n.TypeRef = t.TypeRef
 	n.Error = t.Error
 	n.MetaKey = t.MetaKey

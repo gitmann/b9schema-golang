@@ -87,8 +87,12 @@ func (r *SimpleRenderer) Path(t *types.TypeNode) []string {
 	}
 
 	// Type.
-	var typePart string
-	if t.TypeCategory == typecategory.Invalid.String() {
+	var typePart, typeCategory string
+	if gt := generictype.FromType(t.Type); gt != nil {
+		typeCategory = gt.Category().String()
+	}
+
+	if typeCategory == typecategory.Invalid.String() {
 		typePart = t.Type
 	} else {
 		typePart = generictype.PathDefaultOfType(t.Type)
